@@ -650,7 +650,12 @@ export default function App() {
   const [macroForm, setMacroForm] = useState({...customMacros});
 
   // Habits
-  const [habits, setHabits] = useState(DEFAULT_HABITS);
+  const [habits, setHabits] = useState(()=>{
+    try {
+      const saved = localStorage.getItem('rebuild_habits');
+      return saved ? JSON.parse(saved) : DEFAULT_HABITS;
+    } catch { return DEFAULT_HABITS; }
+  });
   const [habitsDone, setHabitsDone] = useState(Array(DEFAULT_HABITS.length).fill(false));
   const [habitForm, setHabitForm] = useState({name:"",icon:"⭐",pts:"10"});
 
@@ -810,7 +815,7 @@ export default function App() {
   function addHabit() {
     if(!habitForm.name.trim()) return;
     const newH = {name:habitForm.name, icon:habitForm.icon, pts:parseInt(habitForm.pts)||10};
-    setHabits(p=>[...p,newH]);
+    setHabits(p=>{ const n=[...p,newH]; try{localStorage.setItem('rebuild_habits',JSON.stringify(n))}catch{}; return n; });
     setHabitsDone(p=>[...p,false]);
     setHabitForm({name:"",icon:"⭐",pts:"10"});
     setModal(null);
@@ -1431,7 +1436,7 @@ export default function App() {
           {screen==="habits"&&(
             <div className="scr">
               <div className="ph">
-                <div className="page-title">Habits</div>
+                <div className="page-title">Non-Negotiables</div>
                 <div className="page-sub">{habitsDoneCount} of {habits.length} complete today</div>
               </div>
 
@@ -1471,7 +1476,7 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="t-label sec-gap">DAILY HABITS</div>
+                <div className="t-label sec-gap">NON-NEGOTIABLES</div>
                 {habits.map((h,i)=>(
                   <div key={i} className="ha-item">
                     <div className={`ha-chk ${habitsDone[i]?"on":""}`} onClick={()=>setHabitsDone(p=>{const n=[...p];n[i]=!n[i];return n;})}>
@@ -1480,10 +1485,14 @@ export default function App() {
                     <div style={{fontSize:18,flexShrink:0}}>{h.icon}</div>
                     <div className={`ha-name ${habitsDone[i]?"done":""}`}>{h.name}</div>
                     <div className={`ha-pts ${habitsDone[i]?"on":""}`}>+{h.pts}pts</div>
+                    <button onClick={()=>{
+                      setHabits(p=>{ const n=p.filter((_,j)=>j!==i); try{localStorage.setItem('rebuild_habits',JSON.stringify(n))}catch{}; return n; });
+                      setHabitsDone(p=>p.filter((_,j)=>j!==i));
+                    }} style={{background:"none",border:"none",color:"#444",fontSize:14,cursor:"pointer",padding:"4px 6px",flexShrink:0}}>✕</button>
                   </div>
                 ))}
 
-                <button className="btn-sec" style={{marginTop:12}} onClick={()=>setModal("addHabit")}>+ ADD CUSTOM HABIT</button>
+                <button className="btn-sec" style={{marginTop:12}} onClick={()=>setModal("addHabit")}>+ ADD NON-NEGOTIABLE</button>
               </div>
             </div>
           )}
@@ -1698,14 +1707,14 @@ export default function App() {
             <div className="overlay" onClick={()=>setModal(null)}>
               <div className="sheet" onClick={e=>e.stopPropagation()}>
                 <div className="sheet-handle"/>
-                <div className="sheet-title">Add Habit</div>
-                <div className="sheet-sub">Create a custom daily habit</div>
+                <div className="sheet-title">Add Non-Negotiable</div>
+                <div className="sheet-sub">Add a daily non-negotiable to your list</div>
                 <input className="inp" placeholder="Habit name (e.g. Journaling)" value={habitForm.name} onChange={e=>setHabitForm(p=>({...p,name:e.target.value}))}/>
                 <div className="inp-row">
                   <input className="inp" placeholder="Icon (emoji)" value={habitForm.icon} onChange={e=>setHabitForm(p=>({...p,icon:e.target.value}))} style={{flex:"0 0 80px"}}/>
                   <input className="inp" placeholder="Points (e.g. 10)" type="number" value={habitForm.pts} onChange={e=>setHabitForm(p=>({...p,pts:e.target.value}))}/>
                 </div>
-                <button className="btn-p" onClick={addHabit}>ADD HABIT</button>
+                <button className="btn-p" onClick={addHabit}>ADD NON-NEGOTIABLE</button>
                 <button className="btn-sec" onClick={()=>setModal(null)}>Cancel</button>
               </div>
             </div>
