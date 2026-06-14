@@ -1821,6 +1821,10 @@ export default function App() {
                   setModal(null);
                 }}>SAVE SETTINGS</button>
                 <button className="btn-sec" onClick={()=>setModal(null)}>Cancel</button>
+                <button className="btn-sec" style={{marginTop:8,color:"#e74c3c",borderColor:"#e74c3c33"}} onClick={async()=>{
+                  await supabase.auth.signOut();
+                  setModal(null);
+                }}>Sign Out</button>
               </div>
             </div>
           )}
