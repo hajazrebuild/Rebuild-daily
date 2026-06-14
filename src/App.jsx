@@ -719,6 +719,7 @@ export default function App() {
     if(!dbLoaded || !userId) return;
     const timer = setTimeout(()=>{
       const today = new Date().toISOString().split("T")[0];
+      console.log("Saving to Supabase, userId:", userId, "prayers:", prayerCount);
       supabase.from("daily_logs").upsert({
           user_id: userId,
           log_date: today,
@@ -733,7 +734,10 @@ export default function App() {
           score,
           ex_done: JSON.stringify(exDone),
           meals_done: JSON.stringify(mealsDone),
-        }, { onConflict: "user_id,log_date" });
+        }, { onConflict: "user_id,log_date" }).then(({error}) => {
+          if(error) console.error("Save failed:", JSON.stringify(error));
+          else console.log("Save success!");
+        });
         if(completedDays.size > 0) {
           supabase.from("challenge_progress").upsert({
             user_id: userId,
