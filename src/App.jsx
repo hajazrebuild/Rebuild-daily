@@ -1957,13 +1957,17 @@ export default function App() {
                   // Save to Supabase
                   const { data: { user } } = await supabase.auth.getUser();
                   if(user) {
-                    supabase.from("profiles").upsert({
+                    const photoToSave = updated.photo || null;
+                    console.log("Saving profile, photo size:", photoToSave ? photoToSave.length : 0);
+                    const { error } = await supabase.from("profiles").upsert({
                       id: user.id,
                       username: userName,
                       avatar: updated.avatar,
                       bio: updated.bio||"",
-                      photo: updated.photo||null,
+                      photo: photoToSave,
                     }, { onConflict: "id" });
+                    if(error) console.error("Profile save error:", error.message);
+                    else console.log("Profile saved ✓");
                   }
                   setModal(null);
                 }}>SAVE PROFILE</button>
