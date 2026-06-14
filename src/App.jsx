@@ -1111,7 +1111,11 @@ export default function App() {
                         const done=!!exDone[k];
                         return(
                           <div key={i} className={`ex-card ${done?"done":""}`}>
-                            <div className={`ex-chk ${done?"on":""}`} onClick={()=>setExDone(p=>({...p,[k]:!p[k]}))}>
+                            <div className={`ex-chk ${done?"on":""}`} onClick={()=>setExDone(p=>{
+                              const n={...p,[k]:!p[k]};
+                              try{localStorage.setItem('rebuild_ex_done_'+getWeekKey(),JSON.stringify(n))}catch{}
+                              return n;
+                            })}>
                               {done&&"✓"}
                             </div>
                             <div style={{flex:1}}>
@@ -1123,6 +1127,13 @@ export default function App() {
                               </div>
                               {ex.note&&<div className="ex-note">→ {ex.note}</div>}
                             </div>
+                            <button onClick={()=>{
+                              setCustomExercises(p=>{
+                                const updated={...p,[dayIdx]:(p[dayIdx]||[]).filter((_,idx)=>idx!==i)};
+                                try{localStorage.setItem('rebuild_custom_ex',JSON.stringify(updated))}catch{}
+                                return updated;
+                              });
+                            }} style={{background:"none",border:"none",color:"#555",fontSize:16,cursor:"pointer",padding:"4px 8px",flexShrink:0}}>✕</button>
                           </div>
                         );
                       })}
