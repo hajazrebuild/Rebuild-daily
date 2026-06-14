@@ -684,6 +684,12 @@ export default function App() {
 
   // ── Supabase: load today's log ONCE when user first reaches home ──
   const [dbLoaded, setDbLoaded] = React.useState(false);
+  const [lbData, setLbData] = React.useState([]);
+  useEffect(()=>{
+    if(screen !== "community") return;
+    supabase.from("leaderboard").select("*").limit(10)
+      .then(({ data })=>{ if(data && data.length > 0) setLbData(data); });
+  }, [screen]);
   const hasLoadedRef = React.useRef(false);
   useEffect(()=>{
     if(screen !== "home" || hasLoadedRef.current) return;
@@ -1438,15 +1444,6 @@ export default function App() {
 
           {/* COMMUNITY */}
           {screen==="community"&&(()=>{
-            const [lbData, setLbData] = React.useState([]);
-            const [lbLoading, setLbLoading] = React.useState(true);
-            React.useEffect(()=>{
-              supabase.from("leaderboard").select("*").limit(10)
-                .then(({ data })=>{
-                  if(data && data.length > 0) setLbData(data);
-                  setLbLoading(false);
-                });
-            },[]);
             const badges = ["🏆","🥈","🥉"];
             const BOARD = lbData.length > 0 ? lbData.map((r,i)=>({
               rank: r.rank || i+1,
