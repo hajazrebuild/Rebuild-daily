@@ -764,6 +764,21 @@ export default function App() {
     } catch {}
   }, [foodEntries]);
 
+  // ── Supabase: sync profile data when key state changes ──────────
+  useEffect(()=>{
+    if(!userId) return;
+    supabase.from("profiles").upsert({
+      id: userId,
+      username: userName,
+      habits: habits,
+      active_challenge: activeChallenge,
+      completed_days: [...completedDays],
+      quran_pages: quranPages,
+      khatam_page: khatamPage,
+      macro_targets: customMacros,
+    }, { onConflict: "id" });
+  }, [habits, activeChallenge, completedDays, quranPages, khatamPage, customMacros, userId]);
+
   const score = useMemo(()=>calcScore(prayerCount, exDoneCount, currentExercises.length, habitsDoneCount, habits.length, caloriesHit, sleepLogged ? sleepHrs : 0),[prayerCount,exDoneCount,currentExercises.length,habitsDoneCount,habits.length,caloriesHit,sleepLogged,sleepHrs]);
 
   // ── Supabase: load today's log ONCE when user first reaches home ──
@@ -806,6 +821,30 @@ export default function App() {
       const { data: { user } } = await supabase.auth.getUser();
       if(!user) { setDbLoaded(true); return; }
       const today = new Date().toISOString().split("T")[0];
+
+      // Load profile data from Supabase
+      const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+      if(profileData) {
+        if(profileData.avatar || profileData.bio || profileData.photo) {
+          setProfile(p=>({...p, avatar: profileData.avatar||p.avatar, bio: profileData.bio||"", photo: profileData.photo||null}));
+        }
+        if(profileData.habits && profileData.habits.length > 0) {
+          setHabits(profileData.habits);
+          setHabitsDone(Array(profileData.habits.length).fill(false));
+        }
+        if(profileData.active_challenge) {
+          setActiveChallenge(profileData.active_challenge);
+          try{localStorage.setItem('rebuild_challenge',JSON.stringify(profileData.active_challenge))}catch{}
+        }
+        if(profileData.completed_days && profileData.completed_days.length > 0) {
+          setCompletedDays(new Set(profileData.completed_days));
+          try{localStorage.setItem('rebuild_completed_days',JSON.stringify(profileData.completed_days))}catch{}
+        }
+        if(profileData.quran_pages) setQuranPages(profileData.quran_pages);
+        if(profileData.khatam_page) setKhatamPage(profileData.khatam_page);
+        if(profileData.macro_targets) setCustomMacros(profileData.macro_targets);
+      }
+
       try {
         const { data } = await supabase.from("daily_logs").select("*").eq("user_id", user.id).eq("log_date", today).maybeSingle();
 
@@ -1897,10 +1936,21 @@ export default function App() {
                   ))}
                 </div>
 
-                <button className="btn-p" onClick={()=>{
+                <button className="btn-p" onClick={async()=>{
                   const updated={...profileForm};
                   setProfile(updated);
                   try { localStorage.setItem("rebuild_profile",JSON.stringify(updated)); } catch {}
+                  // Save to Supabase
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if(user) {
+                    supabase.from("profiles").upsert({
+                      id: user.id,
+                      username: userName,
+                      avatar: updated.avatar,
+                      bio: updated.bio||"",
+                      photo: updated.photo||null,
+                    }, { onConflict: "id" });
+                  }
                   setModal(null);
                 }}>SAVE PROFILE</button>
                 <button className="btn-sec" onClick={()=>setModal(null)}>Cancel</button>
