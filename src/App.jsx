@@ -377,7 +377,20 @@ function calcScore(prayers, exDone, exTotal, habDone, habTotal, calHit, sleepHrs
 // ── Onboarding Flow ───────────────────────────────────────────────────────────
 function OnboardFlow({ onComplete, logo }) {
   const [phase, setPhase] = useState("splash");
-  const [authMode, setAuthMode] = useState(null);
+  const [authMode, setAuthMode] = useState(()=>{
+    // Check if redirected from email confirmation
+    const hash = window.location.hash;
+    const params = new URLSearchParams(window.location.search);
+    if(hash.includes('type=signup') || hash.includes('type=email') || params.get('type') === 'signup') {
+      return 'signin';
+    }
+    return null;
+  });
+  const [emailConfirmed, setEmailConfirmed] = useState(()=>{
+    const hash = window.location.hash;
+    const params = new URLSearchParams(window.location.search);
+    return hash.includes('type=signup') || hash.includes('type=email') || params.get('type') === 'signup';
+  });
   const [nameInput, setNameInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
@@ -423,7 +436,24 @@ function OnboardFlow({ onComplete, logo }) {
         }
       }
     } catch(err) {
-      setAuthError(err.message || "Something went wrong. Try again.");
+      const msg = err.message || "Something went wrong. Try again.";
+      if(msg.toLowerCase().includes("email not confirmed")) {
+        setAuthError("email_not_confirmed");
+      } else {
+        setAuthError(msg);
+      }
+    }
+    setAuthLoading(false);
+  }
+
+  async function resendConfirmation() {
+    if(!emailInput.trim()) { setAuthError("Enter your email address first."); return; }
+    setAuthLoading(true);
+    try {
+      await supabase.auth.resend({ type: "signup", email: emailInput.trim() });
+      setAuthError("confirmation_resent");
+    } catch(e) {
+      setAuthError("Could not resend. Try again.");
     }
     setAuthLoading(false);
   }
@@ -523,13 +553,33 @@ function OnboardFlow({ onComplete, logo }) {
           {authMode === "signup" ? "Start your rebuild today." : "Sign in to continue."}
         </div>
 
+        {emailConfirmed && (
+          <div style={{background:"#1a3a1a",border:"1px solid #2a6a2a",borderRadius:12,padding:"12px 14px",marginBottom:12,textAlign:"center"}}>
+            <div style={{fontSize:20,marginBottom:4}}>✅</div>
+            <div style={{fontFamily:"-apple-system,sans-serif",fontSize:14,color:"#4CAF50",fontWeight:600}}>Email confirmed!</div>
+            <div style={{fontFamily:"-apple-system,sans-serif",fontSize:12,color:"#aaa",marginTop:2}}>Please sign in to continue.</div>
+          </div>
+        )}
         {authMode === "signup" && <input style={S.inp} placeholder="Full name" type="text" value={nameInput} onChange={e=>{setNameInput(e.target.value);setAuthError("");}} />}
         <input style={S.inp} placeholder="Email address" type="email" value={emailInput} onChange={e=>{setEmailInput(e.target.value);setAuthError("");}} />
         <input style={S.inp} placeholder="Password" type="password" value={passwordInput} onChange={e=>{setPasswordInput(e.target.value);setAuthError("");}} />
 
-        {authError && (
+        {authError === "email_not_confirmed" ? (
+          <div style={{background:"#3a1a1a",border:"1px solid #6a2a2a",borderRadius:12,padding:"12px 14px",marginBottom:8,textAlign:"center"}}>
+            <div style={{fontFamily:"-apple-system,sans-serif",fontSize:13,color:"#e74c3c",fontWeight:600,marginBottom:4}}>Email not confirmed</div>
+            <div style={{fontFamily:"-apple-system,sans-serif",fontSize:12,color:"#aaa",marginBottom:8}}>Check your inbox and click the confirmation link.</div>
+            <button onClick={resendConfirmation} style={{background:"#E8601A",color:"white",border:"none",borderRadius:8,padding:"8px 16px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"-apple-system,sans-serif"}}>
+              Resend confirmation email
+            </button>
+          </div>
+        ) : authError === "confirmation_resent" ? (
+          <div style={{background:"#1a3a1a",border:"1px solid #2a6a2a",borderRadius:12,padding:"12px 14px",marginBottom:8,textAlign:"center"}}>
+            <div style={{fontFamily:"-apple-system,sans-serif",fontSize:13,color:"#4CAF50",fontWeight:600}}>✅ Confirmation email sent!</div>
+            <div style={{fontFamily:"-apple-system,sans-serif",fontSize:12,color:"#aaa",marginTop:2}}>Check your inbox.</div>
+          </div>
+        ) : authError ? (
           <div style={{fontSize:12,color:"#e74c3c",fontFamily:"-apple-system,sans-serif",marginTop:-6,marginBottom:4}}>{authError}</div>
-        )}
+        ) : null}
 
         <button onClick={handleAuth} disabled={authLoading} style={{ width:"100%", background: authLoading ? "#333" : "#E8601A", color:"white", border:"none", borderRadius:14, padding:16, fontSize:16, fontWeight:600, fontFamily:"-apple-system,sans-serif", cursor: authLoading ? "not-allowed" : "pointer", marginTop:8, letterSpacing:"-0.01em", transition:"background 0.2s" }}>
           {authLoading ? "Please wait..." : authMode === "signup" ? "Create Account" : "Sign In"}
