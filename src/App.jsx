@@ -719,7 +719,6 @@ export default function App() {
     if(!dbLoaded || !userId) return;
     const timer = setTimeout(()=>{
       const today = new Date().toISOString().split("T")[0];
-      console.log("Saving to Supabase, userId:", userId, "prayers:", prayerCount);
       supabase.from("daily_logs").upsert({
           user_id: userId,
           log_date: today,
