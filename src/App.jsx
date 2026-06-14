@@ -1506,7 +1506,7 @@ export default function App() {
                 {/* Leaderboard header */}
                 <div style={{padding:"0 24px 12px"}}>
                   <div className="t-label sec-gap" style={{marginBottom:4}}>LEADERBOARD</div>
-                  <div style={{fontFamily:G.body,fontSize:12,color:G.muted}}>Top members this week · Live when backend connects</div>
+                  <div style={{fontFamily:G.body,fontSize:12,color:G.muted}}>Top members this week · Updated daily</div>
                 </div>
 
                 {/* Podium */}
