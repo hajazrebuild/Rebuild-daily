@@ -926,22 +926,24 @@ export default function App() {
                 <div className="t-label sec-gap">REBUILD CLUB</div>
                 <div className="card" style={{cursor:"pointer"}} onClick={()=>setScreen("community")}>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"10px 12px",background:G.s2,borderRadius:10,border:`1px solid ${G.accent}33`}}>
-                    <div style={{fontSize:20}}>{profile.avatar}</div>
+                    <div style={{fontSize:20}}>{profile?.avatar||"💪"}</div>
                     <div style={{flex:1}}>
                       <div style={{fontFamily:G.sans,fontSize:13,fontWeight:600,color:G.text}}>{userName||"You"} <span style={{fontFamily:G.mono,fontSize:9,color:G.accent}}>· YOU</span></div>
-                      <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,marginTop:1}}>RANK #14 THIS WEEK</div>
+                      <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,marginTop:1}}>RANK #{lbData.find(r=>r&&r.username===userName)?.rank||"—"} THIS WEEK</div>
                     </div>
                     <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:22,fontWeight:800,color:G.accent}}>{score}</div>
                   </div>
                   <div style={{display:"flex",gap:6,marginBottom:12}}>
-                    {[{rank:1,name:"Ibrahim",avatar:"🦁",score:94,color:G.gold},{rank:2,name:"Yusuf",avatar:"🔥",score:91,color:G.purple},{rank:3,name:"Omar",avatar:"⚡",score:88,color:G.accent}].map(p=>(
-                      <div key={p.rank} style={{flex:1,background:G.s2,borderRadius:10,padding:"8px 6px",textAlign:"center",border:`1px solid ${p.color}33`}}>
-                        <div style={{fontSize:16,marginBottom:2}}>{p.avatar}</div>
-                        <div style={{fontFamily:G.sans,fontSize:10,fontWeight:600,color:G.text}}>{p.name}</div>
-                        <div style={{fontFamily:G.mono,fontSize:10,color:p.color,fontWeight:700}}>{p.score}</div>
-                        <div style={{fontFamily:G.mono,fontSize:8,color:G.muted}}>#{p.rank}</div>
+                    {(lbData.length > 0 ? lbData.filter(r=>r).slice(0,3) : []).map((p,i)=>{
+                      const colors=[G.gold,G.purple,G.accent];
+                      return(
+                      <div key={i} style={{flex:1,background:G.s2,borderRadius:10,padding:"8px 6px",textAlign:"center",border:`1px solid ${colors[i]}33`}}>
+                        <div style={{fontSize:16,marginBottom:2}}>{p.avatar||"💪"}</div>
+                        <div style={{fontFamily:G.sans,fontSize:10,fontWeight:600,color:G.text}}>{(p.username||"User").split(" ")[0]}</div>
+                        <div style={{fontFamily:G.mono,fontSize:10,color:colors[i],fontWeight:700}}>{p.score||0}</div>
+                        <div style={{fontFamily:G.mono,fontSize:8,color:G.muted}}>#{i+1}</div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div style={{fontFamily:G.mono,fontSize:9,color:G.muted}}>10 MEMBERS RANKED</div>
