@@ -637,7 +637,13 @@ export default function App() {
       return saved ? JSON.parse(saved) : {kcal:2000,protein:150,carbs:200,fat:65};
     } catch { return {kcal:2000,protein:150,carbs:200,fat:65}; }
   });
-  const [foodEntries, setFoodEntries] = useState([]);
+  const [foodEntries, setFoodEntries] = useState(()=>{
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const saved = localStorage.getItem('rebuild_food_'+today);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [foodSearch, setFoodSearch] = useState("");
   const [customFoods, setCustomFoods] = useState([]);
   const [customFoodForm, setCustomFoodForm] = useState({name:"",per:"100",unit:"g",kcal:"",protein:"",carbs:"",fat:""});
@@ -695,6 +701,13 @@ export default function App() {
       setCaloriesHit(foodTotals.kcal >= customMacros.kcal * 0.9);
     }
   },[nPlan, hajazConsumed.kcal, foodTotals.kcal, customMacros.kcal]);
+
+  useEffect(()=>{
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('rebuild_food_'+today, JSON.stringify(foodEntries));
+    } catch {}
+  }, [foodEntries]);
 
   const score = useMemo(()=>calcScore(prayerCount, exDoneCount, currentExercises.length, habitsDoneCount, habits.length, caloriesHit, sleepLogged ? sleepHrs : 0),[prayerCount,exDoneCount,currentExercises.length,habitsDoneCount,habits.length,caloriesHit,sleepLogged,sleepHrs]);
 
