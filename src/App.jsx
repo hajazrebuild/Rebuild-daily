@@ -603,10 +603,10 @@ export default function App() {
   const [khatamPage, setKhatamPage] = useState(142);
 
   // Workout
-  const [wPlan, setWPlan] = useState("hajaz");
+  const [wPlan, setWPlan] = useState(()=>{ try{return localStorage.getItem('rebuild_wplan')||'hajaz'}catch{return 'hajaz'} });
   const [dayIdx, setDayIdx] = useState(()=>{ const d=new Date().getDay(); return d===0?6:d-1; }); // 0=Mon…6=Sun
   const [exDone, setExDone] = useState({});
-  const [customExercises, setCustomExercises] = useState({});
+  const [customExercises, setCustomExercises] = useState(()=>{ try { const s=localStorage.getItem('rebuild_custom_ex'); return s?JSON.parse(s):{} } catch{return {}} });
   const [exForm, setExForm] = useState({name:"",sets:"3",reps:"10-12",rest:"60s",note:""});
 
   // Nutrition
@@ -766,7 +766,7 @@ export default function App() {
   function addCustomEx() {
     if(!exForm.name.trim()) return;
     const dayExes = customExercises[dayIdx] || [];
-    setCustomExercises(p=>({...p,[dayIdx]:[...dayExes, {...exForm}]}));
+    setCustomExercises(p=>{ const n={...p,[dayIdx]:[...(p[dayIdx]||[]),{...exForm}]}; try{localStorage.setItem('rebuild_custom_ex',JSON.stringify(n))}catch{}; return n; });
     setExForm({name:"",sets:"3",reps:"10-12",rest:"60s",note:""});
   }
 
@@ -1049,8 +1049,8 @@ export default function App() {
 
               <div className="sec">
                 <div className="toggle-row">
-                  <button className={`tgl ${wPlan==="hajaz"?"on":""}`} onClick={()=>setWPlan("hajaz")}>HAJAZ'S PLAN</button>
-                  <button className={`tgl ${wPlan==="custom"?"on":""}`} onClick={()=>setWPlan("custom")}>MY OWN PLAN</button>
+                  <button className={`tgl ${wPlan==="hajaz"?"on":""}`} onClick={()=>{setWPlan("hajaz");try{localStorage.setItem('rebuild_wplan','hajaz')}catch{}}}>HAJAZ'S PLAN</button>
+                  <button className={`tgl ${wPlan==="custom"?"on":""}`} onClick={()=>{setWPlan("custom");try{localStorage.setItem('rebuild_wplan','custom')}catch{}}}>MY OWN PLAN</button>
                 </div>
               </div>
 
