@@ -1603,32 +1603,23 @@ export default function App() {
                 </div>
                 <div className="share-btns" style={{marginBottom:8}}>
                   <button className="sh-btn p" onClick={async()=>{
-                    if(navigator.share){
-                      try{
-                        await navigator.share({
-                          title:"Rebuild Daily",
-                          text:`My discipline score today: ${score}/100\n🤲 ${prayerCount}/5 Prayers · 💪 ${exDoneCount} Exercises · ✅ ${habitsDoneCount} Habits\nrebuild-daily.vercel.app`,
-                        });
-                      }catch(e){}
-                    } else {
-                      alert("Share not supported on this browser.");
-                    }
-                  }}>📲 SHARE TO STORY</button>
+                    try{
+                      const el=document.querySelector(".share-preview");
+                      const canvas=await window.html2canvas(el,{backgroundColor:"#0a0a0a",scale:3,useCORS:true,logging:false});
+                      canvas.toBlob(async(blob)=>{
+                        const file=new File([blob],"rebuild-score.png",{type:"image/png"});
+                        if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+                          await navigator.share({files:[file],title:"Rebuild Daily",text:`Discipline Score: ${score}/100`});
+                        } else {
+                          const a=document.createElement("a");
+                          a.href=URL.createObjectURL(blob);
+                          a.download="rebuild-score.png";
+                          a.click();
+                        }
+                      },"image/png");
+                    }catch(e){ alert("Could not save image. Try again."); console.error(e); }
+                  }}>💾 SAVE AS PNG</button>
                   <button className="sh-btn p" onClick={()=>{
-                    const text=`My discipline score today: ${score}/100\n🤲 ${prayerCount}/5 Prayers · 💪 ${exDoneCount} Exercises · ✅ ${habitsDoneCount} Habits\nrebuild-daily.vercel.app`;
-                    navigator.clipboard.writeText(text).then(()=>alert("Copied to clipboard!"));
-                  }}>📋 COPY TEXT</button>
-                </div>
-                <div className="share-btns">
-                  <button className="sh-btn" onClick={()=>{
-                    const text=`REBUILD DAILY\nDiscipline Score: ${score}/100\n${prayerCount}/5 Prayers | ${exDoneCount} Exercises | ${habitsDoneCount} Habits\nrebuild-daily.vercel.app`;
-                    const blob=new Blob([text],{type:"text/plain"});
-                    const a=document.createElement("a");
-                    a.href=URL.createObjectURL(blob);
-                    a.download="rebuild-score.txt";
-                    a.click();
-                  }}>💾 SAVE SCORE</button>
-                  <button className="sh-btn" onClick={()=>{
                     if(navigator.share){
                       navigator.share({url:"https://rebuild-daily.vercel.app",title:"Rebuild Daily",text:"Join me on Rebuild Daily - faith, fitness & discipline tracker."});
                     }
