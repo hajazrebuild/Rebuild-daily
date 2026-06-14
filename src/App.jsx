@@ -547,6 +547,13 @@ function OnboardFlow({ onComplete, logo }) {
   );
 }
 
+function getWeekKey() {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  return monday.toISOString().split('T')[0];
+}
+
 export default function App() {
   const [userName, setUserName] = useState("");
   const [screen, setScreen] = useState("onboard");
@@ -608,7 +615,13 @@ export default function App() {
   // Workout
   const [wPlan, setWPlan] = useState(()=>{ try{return localStorage.getItem('rebuild_wplan')||'hajaz'}catch{return 'hajaz'} });
   const [dayIdx, setDayIdx] = useState(()=>{ const d=new Date().getDay(); return d===0?6:d-1; }); // 0=Mon…6=Sun
-  const [exDone, setExDone] = useState({});
+  const [exDone, setExDone] = useState(()=>{
+    try {
+      const wk = getWeekKey();
+      const saved = localStorage.getItem('rebuild_ex_done_' + wk);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const [customExercises, setCustomExercises] = useState(()=>{ try { const s=localStorage.getItem('rebuild_custom_ex'); return s?JSON.parse(s):{} } catch{return {}} });
   const [exForm, setExForm] = useState({name:"",sets:"3",reps:"10-12",rest:"60s",note:""});
 
@@ -767,7 +780,11 @@ export default function App() {
 
   function toggleEx(i) {
     const k=`${dayIdx}-${wPlan}-${i}`;
-    setExDone(p=>({...p,[k]:!p[k]}));
+    setExDone(p=>{
+      const n={...p,[k]:!p[k]};
+      try { localStorage.setItem('rebuild_ex_done_'+getWeekKey(), JSON.stringify(n)); } catch {}
+      return n;
+    });
   }
 
   function addCustomEx() {
