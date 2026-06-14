@@ -1602,12 +1602,37 @@ export default function App() {
                   </div>
                 </div>
                 <div className="share-btns" style={{marginBottom:8}}>
-                  <button className="sh-btn p">📲 STORY (9:16)</button>
-                  <button className="sh-btn p">🖼 POST (1:1)</button>
+                  <button className="sh-btn p" onClick={async()=>{
+                    if(navigator.share){
+                      try{
+                        await navigator.share({
+                          title:"Rebuild Daily",
+                          text:`My discipline score today: ${score}/100\n🤲 ${prayerCount}/5 Prayers · 💪 ${exDoneCount} Exercises · ✅ ${habitsDoneCount} Habits\nrebuild-daily.vercel.app`,
+                        });
+                      }catch(e){}
+                    } else {
+                      alert("Share not supported on this browser.");
+                    }
+                  }}>📲 SHARE TO STORY</button>
+                  <button className="sh-btn p" onClick={()=>{
+                    const text=`My discipline score today: ${score}/100\n🤲 ${prayerCount}/5 Prayers · 💪 ${exDoneCount} Exercises · ✅ ${habitsDoneCount} Habits\nrebuild-daily.vercel.app`;
+                    navigator.clipboard.writeText(text).then(()=>alert("Copied to clipboard!"));
+                  }}>📋 COPY TEXT</button>
                 </div>
                 <div className="share-btns">
-                  <button className="sh-btn">💾 SAVE IMAGE</button>
-                  <button className="sh-btn">📋 COPY</button>
+                  <button className="sh-btn" onClick={()=>{
+                    const text=`REBUILD DAILY\nDiscipline Score: ${score}/100\n${prayerCount}/5 Prayers | ${exDoneCount} Exercises | ${habitsDoneCount} Habits\nrebuild-daily.vercel.app`;
+                    const blob=new Blob([text],{type:"text/plain"});
+                    const a=document.createElement("a");
+                    a.href=URL.createObjectURL(blob);
+                    a.download="rebuild-score.txt";
+                    a.click();
+                  }}>💾 SAVE SCORE</button>
+                  <button className="sh-btn" onClick={()=>{
+                    if(navigator.share){
+                      navigator.share({url:"https://rebuild-daily.vercel.app",title:"Rebuild Daily",text:"Join me on Rebuild Daily - faith, fitness & discipline tracker."});
+                    }
+                  }}>🔗 SHARE APP</button>
                 </div>
                 <button className="btn-sec" onClick={()=>setModal(null)}>Close</button>
               </div>
