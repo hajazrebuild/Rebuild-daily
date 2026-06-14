@@ -1448,7 +1448,7 @@ export default function App() {
           {/* COMMUNITY */}
           {screen==="community"&&(()=>{
             const badges = ["🏆","🥈","🥉"];
-            const BOARD = lbData.length > 0 ? lbData.map((r,i)=>({
+            const BOARD = lbData.length > 0 ? lbData.filter(r=>r!=null).map((r,i)=>({
               rank: r.rank || i+1,
               name: r.username || "User",
               avatar: r.avatar || "💪",
