@@ -703,6 +703,8 @@ export default function App() {
           if(data.habits_done > 0) setHabitsDone(h => h.map((_,i) => i < data.habits_done));
           if(data.ex_done) setExDone(JSON.parse(data.ex_done));
           if(data.meals_done) setMealsDone(JSON.parse(data.meals_done));
+          if(data.custom_exercises) setCustomExercises(JSON.parse(data.custom_exercises));
+          if(data.w_plan) setWPlan(data.w_plan);
         }
       } catch(e) { console.error("DB load error:", e); }
       setDbLoaded(true);
@@ -733,6 +735,8 @@ export default function App() {
           score,
           ex_done: JSON.stringify(exDone),
           meals_done: JSON.stringify(mealsDone),
+          custom_exercises: JSON.stringify(customExercises),
+          w_plan: wPlan,
         }, { onConflict: "user_id,log_date" }).then(({error}) => {
           if(error) console.error("Save failed:", JSON.stringify(error));
           else console.log("Save success!");
@@ -747,7 +751,7 @@ export default function App() {
         }
     }, 800);
     return () => clearTimeout(timer);
-  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId]);
+  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises]);
 
   const challengeDay = completedDays.size;
   const earnedMilestones = MILESTONES.filter(m=>challengeDay>=m);
