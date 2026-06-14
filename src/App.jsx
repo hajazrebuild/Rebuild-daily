@@ -1891,7 +1891,14 @@ export default function App() {
                 <button onClick={()=>{
                   setPrayers([false,false,false,false,false]);
                   setTahajjud(false);
-                  setExDone({});
+                  // Only clear today's day index ticks, not the whole week
+                  setExDone(p=>{
+                    const todayIdx=new Date().getDay()===0?6:new Date().getDay()-1;
+                    const n={...p};
+                    Object.keys(n).forEach(k=>{ if(k.startsWith(`${todayIdx}-`)) delete n[k]; });
+                    try{localStorage.setItem('rebuild_ex_done_'+getWeekKey(),JSON.stringify(n))}catch{}
+                    return n;
+                  });
                   setHabitsDone(Array(habits.length).fill(false));
                   setMealsDone({});
                   setFoodEntries([]);
