@@ -593,7 +593,7 @@ export default function App() {
 
   // Challenge
   const [activeChallenge, setActiveChallenge] = useState(()=>{ try{const s=localStorage.getItem('rebuild_challenge');return s?JSON.parse(s):null}catch{return null} });
-  const [completedDays, setCompletedDays] = useState(new Set());
+  const [completedDays, setCompletedDays] = useState(()=>{ try{const s=localStorage.getItem('rebuild_completed_days');return s?new Set(JSON.parse(s)):new Set()}catch{return new Set()} });
   const [customChallengeForm, setCustomChallengeForm] = useState({name:"",days:"",goal:""});
 
   // Prayer
@@ -741,14 +741,12 @@ export default function App() {
           if(error) console.error("Save failed:", JSON.stringify(error));
           else console.log("Save success!");
         });
-        if(completedDays.size > 0) {
-          supabase.from("challenge_progress").upsert({
+        supabase.from("challenge_progress").upsert({
             user_id: userId,
             challenge_id: "75hard",
             completed_days: [...completedDays],
             updated_at: new Date().toISOString(),
           }, { onConflict: "user_id,challenge_id" });
-        }
     }, 800);
     return () => clearTimeout(timer);
   }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises]);
@@ -982,7 +980,7 @@ export default function App() {
                           const locked = !done && !isNext;
                           return (
                             <div key={dayNum}
-                              onClick={()=>{ if(isNext) setCompletedDays(p=>new Set([...p,dayNum])); }}
+                              onClick={()=>{ if(isNext) setCompletedDays(p=>{ const n=new Set([...p,dayNum]); try{localStorage.setItem('rebuild_completed_days',JSON.stringify([...n]))}catch{}; return n; }); }}
                               style={{
                                 aspectRatio:"1",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",
                                 fontSize:"9px",fontFamily:G.mono,cursor:isNext?"pointer":"default",
