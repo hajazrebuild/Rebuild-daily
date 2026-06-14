@@ -592,15 +592,15 @@ export default function App() {
   const [profileForm, setProfileForm] = useState(null); // editing copy
 
   // Challenge
-  const [activeChallenge, setActiveChallenge] = useState(null);
+  const [activeChallenge, setActiveChallenge] = useState(()=>{ try{const s=localStorage.getItem('rebuild_challenge');return s?JSON.parse(s):null}catch{return null} });
   const [completedDays, setCompletedDays] = useState(new Set());
   const [customChallengeForm, setCustomChallengeForm] = useState({name:"",days:"",goal:""});
 
   // Prayer
   const [prayers, setPrayers] = useState([false,false,false,false,false]);
   const [tahajjud, setTahajjud] = useState(false);
-  const [quranPages, setQuranPages] = useState(2);
-  const [khatamPage, setKhatamPage] = useState(142);
+  const [quranPages, setQuranPages] = useState(()=>{ try{return parseInt(localStorage.getItem('rebuild_quran_pages'))||0}catch{return 0} });
+  const [khatamPage, setKhatamPage] = useState(()=>{ try{return parseInt(localStorage.getItem('rebuild_khatam_page'))||1}catch{return 1} });
 
   // Workout
   const [wPlan, setWPlan] = useState(()=>{ try{return localStorage.getItem('rebuild_wplan')||'hajaz'}catch{return 'hajaz'} });
@@ -1018,7 +1018,7 @@ export default function App() {
               <div className="sec">
                 <div className="t-label sec-gap">ALL CHALLENGES</div>
 
-                <div className="ch-card" style={{"--cc":G.muted}} onClick={()=>setActiveChallenge(null)}>
+                <div className="ch-card" style={{"--cc":G.muted}} onClick={()=>setActiveChallenge(()=>{ const v=null; try{localStorage.setItem('rebuild_challenge',JSON.stringify(v))}catch{}; return v; })}>
                   <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:G.muted,borderRadius:"18px 0 0 18px"}}/>
                   <div className="ch-name" style={{color:G.text}}>No Challenge</div>
                   <div className="ch-desc">Run the app freely without a challenge timer.</div>
@@ -1027,7 +1027,7 @@ export default function App() {
 
                 {CHALLENGES.map(ch=>(
                   <div key={ch.id} className={`ch-card ${activeChallenge?.id===ch.id?"on":""}`} style={{"--cc":ch.color}}
-                    onClick={()=>{ if(ch.id==="custom"){setModal("customChallenge");}else{setActiveChallenge(ch);setCompletedDays(new Set());} }}>
+                    onClick={()=>{ if(ch.id==="custom"){setModal("customChallenge");}else{setActiveChallenge(()=>{ const v=ch; try{localStorage.setItem('rebuild_challenge',JSON.stringify(v))}catch{}; return v; });setCompletedDays(new Set());} }}>
                     <div className="ch-name" style={{color:ch.color}}>{ch.name}</div>
                     <div className="ch-desc">{ch.desc}</div>
                     <div className="ch-days-lbl" style={{color:ch.color}}>📅 {ch.days||"?"} DAYS</div>
@@ -1221,7 +1221,7 @@ export default function App() {
                     <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:"15px",fontWeight:700}}>Pages read today</div>
                     <div style={{fontSize:"11px",color:G.muted}}>Track your daily reading</div>
                   </div>
-                  <input className="quran-input" type="number" min="0" value={quranPages} onChange={e=>setQuranPages(parseInt(e.target.value)||0)}/>
+                  <input className="quran-input" type="number" min="0" value={quranPages} onChange={e=>{ const v=parseInt(e.target.value)||0; setQuranPages(v); try{localStorage.setItem('rebuild_quran_pages',v)}catch{} }}/>
                   <div style={{fontFamily:G.mono,fontSize:"10px",color:G.muted}}>pages</div>
                 </div>
 
@@ -1231,7 +1231,7 @@ export default function App() {
                     <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:"15px",fontWeight:700}}>Khatam bookmark</div>
                     <div style={{fontSize:"11px",color:G.muted}}>Currently on page</div>
                   </div>
-                  <input className="quran-input" type="number" min="1" max="604" value={khatamPage} onChange={e=>setKhatamPage(parseInt(e.target.value)||1)}/>
+                  <input className="quran-input" type="number" min="1" max="604" value={khatamPage} onChange={e=>{ const v=parseInt(e.target.value)||1; setKhatamPage(v); try{localStorage.setItem('rebuild_khatam_page',v)}catch{} }}/>
                   <div style={{fontFamily:G.mono,fontSize:"10px",color:G.muted}}>/ 604</div>
                 </div>
 
@@ -1623,7 +1623,7 @@ export default function App() {
                 <input className="inp" placeholder="Your goal (e.g. Hit the gym every day)" value={customChallengeForm.goal} onChange={e=>setCustomChallengeForm(p=>({...p,goal:e.target.value}))}/>
                 <button className="btn-p" onClick={()=>{
                   if(!customChallengeForm.name||!customChallengeForm.days) return;
-                  setActiveChallenge({id:"custom_"+Date.now(),name:customChallengeForm.name,days:parseInt(customChallengeForm.days),color:G.purple,desc:customChallengeForm.goal});
+                  const cv={id:"custom_"+Date.now(),name:customChallengeForm.name,days:parseInt(customChallengeForm.days),color:G.purple,desc:customChallengeForm.goal}; setActiveChallenge(cv); try{localStorage.setItem('rebuild_challenge',JSON.stringify(cv))}catch{};
                   setCompletedDays(new Set());
                   setCustomChallengeForm({name:"",days:"",goal:""});
                   setModal(null);
