@@ -1460,7 +1460,7 @@ export default function App() {
           {screen==="habits"&&(
             <div className="scr">
               <div className="ph">
-                <div className="page-title">Non-Negotiables</div>
+                <div className="page-title" style={{fontSize:26}}>Non-Negotiables</div>
                 <div className="page-sub">{habitsDoneCount} of {habits.length} complete today</div>
               </div>
 
