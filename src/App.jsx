@@ -826,7 +826,9 @@ export default function App() {
       const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
       if(profileData) {
         if(profileData.avatar || profileData.bio || profileData.photo) {
-          setProfile(p=>({...p, avatar: profileData.avatar||p.avatar, bio: profileData.bio||"", photo: profileData.photo||null}));
+          const loaded = {avatar: profileData.avatar||"💪", bio: profileData.bio||"", photo: profileData.photo||null};
+          setProfile(loaded);
+          try{localStorage.setItem("rebuild_profile", JSON.stringify(loaded))}catch{}
         }
         if(profileData.habits && profileData.habits.length > 0) {
           setHabits(profileData.habits);
