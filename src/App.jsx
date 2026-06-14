@@ -718,6 +718,30 @@ export default function App() {
 
   // ── Supabase: load today's log ONCE when user first reaches home ──
   const [dbLoaded, setDbLoaded] = React.useState(false);
+  const [streak, setStreak] = React.useState(0);
+  useEffect(()=>{
+    if(!userId) return;
+    supabase.from("daily_logs")
+      .select("log_date, score")
+      .eq("user_id", userId)
+      .gt("score", 0)
+      .order("log_date", {ascending: false})
+      .limit(365)
+      .then(({ data })=>{
+        if(!data || data.length === 0) { setStreak(0); return; }
+        let count = 0;
+        let check = new Date();
+        check.setHours(0,0,0,0);
+        for(let i = 0; i < data.length; i++){
+          const d = new Date(data[i].log_date);
+          d.setHours(0,0,0,0);
+          const diff = Math.round((check - d) / 86400000);
+          if(diff === 0 || diff === 1){ count++; check = d; }
+          else break;
+        }
+        setStreak(count);
+      });
+  }, [userId, score]);
   const [lbData, setLbData] = React.useState([]);
   useEffect(()=>{
     if(screen !== "community") return;
@@ -1815,7 +1839,7 @@ export default function App() {
 
                 {/* Stats snapshot */}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:16,marginTop:4}}>
-                  {[{lbl:"SCORE",val:score,c:G.accent},{lbl:"PRAYERS",val:`${prayerCount}/5`,c:G.gold},{lbl:"STREAK",val:`${challengeDay}d`,c:G.lime}].map(s=>(
+                  {[{lbl:"SCORE",val:score,c:G.accent},{lbl:"PRAYERS",val:`${prayerCount}/5`,c:G.gold},{lbl:"STREAK",val:`${streak}d`,c:G.lime}].map(s=>(
                     <div key={s.lbl} style={{background:G.s2,borderRadius:12,padding:"10px 8px",textAlign:"center"}}>
                       <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:20,fontWeight:700,color:s.c,lineHeight:1}}>{s.val}</div>
                       <div style={{fontFamily:G.mono,fontSize:8,color:G.muted,marginTop:3,letterSpacing:"0.1em"}}>{s.lbl}</div>
