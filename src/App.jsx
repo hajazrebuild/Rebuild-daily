@@ -1899,7 +1899,21 @@ export default function App() {
                     <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
                       const file=e.target.files?.[0]; if(!file) return;
                       const reader=new FileReader();
-                      reader.onload=ev=>setProfileForm(p=>({...p,photo:ev.target.result,avatar:p.avatar}));
+                      reader.onload=ev=>{
+                        // Compress image to max 200x200px before saving
+                        const img = new Image();
+                        img.onload = ()=>{
+                          const canvas = document.createElement('canvas');
+                          const MAX = 200;
+                          let w = img.width, h = img.height;
+                          if(w > h) { h = h*(MAX/w); w = MAX; } else { w = w*(MAX/h); h = MAX; }
+                          canvas.width = w; canvas.height = h;
+                          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                          const compressed = canvas.toDataURL('image/jpeg', 0.7);
+                          setProfileForm(p=>({...p, photo: compressed, avatar: p.avatar}));
+                        };
+                        img.src = ev.target.result;
+                      };
                       reader.readAsDataURL(file);
                     }}/>
                     <span style={{fontFamily:G.mono,fontSize:10,color:G.accent,letterSpacing:"0.1em",borderBottom:`1px solid ${G.accent}`,paddingBottom:1}}>UPLOAD PHOTO</span>
