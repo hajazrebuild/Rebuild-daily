@@ -744,7 +744,7 @@ export default function App() {
         }
     }, 800);
     return () => clearTimeout(timer);
-  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded]);
+  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId]);
 
   const challengeDay = completedDays.size;
   const earnedMilestones = MILESTONES.filter(m=>challengeDay>=m);
