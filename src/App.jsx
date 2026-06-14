@@ -1888,14 +1888,14 @@ export default function App() {
                 {/* Legal */}
                 <div style={{fontFamily:G.sans,fontSize:"10px",letterSpacing:"0.1em",color:G.muted,marginBottom:8,marginTop:12}}>LEGAL</div>
                 {[
-                  {label:"Terms of Service",url:"https://hajazrebuild.github.io/Rebuild-daily/terms-of-service.html"},
-                  {label:"Privacy Policy",url:"https://hajazrebuild.github.io/Rebuild-daily/privacy-policy.html"},
+                  {label:"Terms of Service",key:"terms"},
+                  {label:"Privacy Policy",key:"privacy"},
                 ].map(l=>(
-                  <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
-                    style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:G.s2,borderRadius:12,marginBottom:6,textDecoration:"none"}}>
+                  <button key={l.key} onClick={()=>setModal(l.key)}
+                    style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:G.s2,borderRadius:12,marginBottom:6,width:"100%",border:"none",cursor:"pointer"}}>
                     <span style={{fontFamily:G.sans,fontSize:13,color:G.text}}>{l.label}</span>
                     <span style={{fontFamily:G.mono,fontSize:10,color:G.muted}}>→</span>
-                  </a>
+                  </button>
                 ))}
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:G.s2,borderRadius:12,marginBottom:6}}>
                   <span style={{fontFamily:G.sans,fontSize:13,color:G.text}}>Contact Support</span>
@@ -1920,6 +1920,54 @@ export default function App() {
                   await supabase.auth.signOut();
                   setModal(null);
                 }}>Sign Out</button>
+              </div>
+            </div>
+          )}
+
+          {/* TERMS OF SERVICE */}
+          {modal==="terms"&&(
+            <div className="overlay" onClick={()=>setModal(null)}>
+              <div className="sheet" onClick={e=>e.stopPropagation()} style={{maxHeight:"80vh",overflowY:"auto"}}>
+                <div className="sheet-handle"/>
+                <div className="sheet-title">Terms of Service</div>
+                <div style={{fontFamily:G.body,fontSize:13,color:G.muted,lineHeight:1.7,marginBottom:16}}>
+                  <p style={{marginBottom:12}}><strong style={{color:G.text}}>Last updated: June 2026</strong></p>
+                  <p style={{marginBottom:12}}>By using Rebuild Daily, you agree to these terms. This app is designed to help you build discipline through faith, fitness and habits.</p>
+                  <p style={{marginBottom:8,color:G.text,fontWeight:600}}>Use of the App</p>
+                  <p style={{marginBottom:12}}>You must be 13 or older to use this app. You are responsible for maintaining the security of your account and all activity under it.</p>
+                  <p style={{marginBottom:8,color:G.text,fontWeight:600}}>Your Data</p>
+                  <p style={{marginBottom:12}}>Your progress, scores and habits are stored securely. We do not sell your personal data to third parties.</p>
+                  <p style={{marginBottom:8,color:G.text,fontWeight:600}}>Health Disclaimer</p>
+                  <p style={{marginBottom:12}}>Rebuild Daily is not a medical app. Consult a healthcare professional before starting any fitness programme.</p>
+                  <p style={{marginBottom:8,color:G.text,fontWeight:600}}>Changes</p>
+                  <p style={{marginBottom:12}}>We may update these terms. Continued use of the app means you accept the updated terms.</p>
+                  <p>For questions contact: <span style={{color:G.accent}}>hajazhaneef@proton.me</span></p>
+                </div>
+                <button className="btn-sec" onClick={()=>setModal(null)}>Close</button>
+              </div>
+            </div>
+          )}
+
+          {/* PRIVACY POLICY */}
+          {modal==="privacy"&&(
+            <div className="overlay" onClick={()=>setModal(null)}>
+              <div className="sheet" onClick={e=>e.stopPropagation()} style={{maxHeight:"80vh",overflowY:"auto"}}>
+                <div className="sheet-handle"/>
+                <div className="sheet-title">Privacy Policy</div>
+                <div style={{fontFamily:G.body,fontSize:13,color:G.muted,lineHeight:1.7,marginBottom:16}}>
+                  <p style={{marginBottom:12}}><strong style={{color:G.text}}>Last updated: June 2026</strong></p>
+                  <p style={{marginBottom:12}}>Rebuild Daily ("we", "us") is committed to protecting your privacy. This policy explains what data we collect and how we use it.</p>
+                  <p style={{marginBottom:8,color:G.text,fontWeight:600}}>What We Collect</p>
+                  <p style={{marginBottom:12}}>• Email address (for account creation)<br/>• Username and profile information<br/>• Daily progress data (prayers, habits, exercises, score)<br/>• Challenge progress</p>
+                  <p style={{marginBottom:8,color:G.text,fontWeight:600}}>How We Use It</p>
+                  <p style={{marginBottom:12}}>Your data is used to provide the app experience — tracking your progress, showing your score and displaying the leaderboard. We do not sell your data.</p>
+                  <p style={{marginBottom:8,color:G.text,fontWeight:600}}>Data Storage</p>
+                  <p style={{marginBottom:12}}>Data is stored securely using Supabase (global infrastructure). We use industry-standard encryption. Data may be stored in servers across multiple regions to serve our global user base.</p>
+                  <p style={{marginBottom:8,color:G.text,fontWeight:600}}>Your Rights</p>
+                  <p style={{marginBottom:12}}>You can request deletion of your account and data at any time by contacting us.</p>
+                  <p>Contact: <span style={{color:G.accent}}>hajazhaneef@proton.me</span></p>
+                </div>
+                <button className="btn-sec" onClick={()=>setModal(null)}>Close</button>
               </div>
             </div>
           )}
