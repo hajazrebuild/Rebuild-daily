@@ -1467,8 +1467,8 @@ export default function App() {
               {rank:9,name:"Isa F.",avatar:"🔥",score:68,streak:5,badge:null},
               {rank:10,name:"Musa J.",avatar:"⚡",score:64,streak:4,badge:null},
             ];
-            const userEntry = lbData.find(r => r.username === userName);
-            const userRank={rank: userEntry?.rank || 14, name:userName||"You",avatar:profile.avatar,score,streak:challengeDay,badge:null,isUser:true};
+            const userEntry = lbData.find(r => r && r.username === userName);
+            const userRank={rank: userEntry?.rank || 14, name:userName||"You",avatar:profile?.avatar||"💪",score,streak:challengeDay,badge:null,isUser:true};
             const podium=BOARD.slice(0,3);
             const rest=BOARD.slice(3);
             const p0=podium[0]||{rank:1,name:"—",avatar:"💪",score:0,streak:0,badge:"🏆"};
