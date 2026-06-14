@@ -405,7 +405,8 @@ function OnboardFlow({ onComplete, logo }) {
         if(error) throw error;
         if(data.user) {
           // Create profile row
-          await supabase.from("profiles").upsert({ id: data.user.id, username: nameInput.trim() });
+          const { error: profileError } = await supabase.from("profiles").upsert({ id: data.user.id, username: nameInput.trim(), avatar: '💪' });
+          if(profileError) console.error("Profile create error:", profileError.message);
           onComplete(nameInput.trim());
         }
       } else {
@@ -416,6 +417,8 @@ function OnboardFlow({ onComplete, logo }) {
         if(error) throw error;
         if(data.user) {
           const name = data.user.user_metadata?.username || data.user.email?.split("@")[0] || "User";
+          // Ensure profile exists (create if missing)
+          await supabase.from("profiles").upsert({ id: data.user.id, username: name, avatar: '💪' }, { onConflict: "id", ignoreDuplicates: true });
           onComplete(name);
         }
       }
