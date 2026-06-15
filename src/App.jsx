@@ -664,7 +664,8 @@ export default function App() {
 
   // Workout
   const [wPlan, setWPlan] = useState(()=>{ try{return localStorage.getItem('rebuild_wplan')||'hajaz'}catch{return 'hajaz'} });
-  const [dayIdx, setDayIdx] = useState(()=>{ const d=new Date().getDay(); return d===0?6:d-1; }); // 0=Mon…6=Sun
+  const dayIdx = useMemo(()=>{ const d=new Date().getDay(); return d===0?6:d-1; }, []); // 0=Mon…6=Sun
+  const [selectedDayIdx, setSelectedDayIdx] = useState(dayIdx);
   const [exDone, setExDone] = useState(()=>{
     try {
       const wk = getWeekKey();
@@ -720,9 +721,9 @@ export default function App() {
   const quote = useMemo(()=>QUOTES[Math.floor(Math.random()*QUOTES.length)],[]);
 
   const prayerCount = prayers.filter(Boolean).length;
-  const currentDay = HAJAZ_PLAN[dayIdx];
-  const currentExercises = wPlan === "hajaz" ? currentDay.exercises : (customExercises[dayIdx] || []);
-  const exDoneKeys = currentExercises.map((_,i)=>`${dayIdx}-${wPlan}-${i}`);
+  const currentDay = HAJAZ_PLAN[selectedDayIdx];
+  const currentExercises = wPlan === "hajaz" ? currentDay.exercises : (customExercises[selectedDayIdx] || []);
+  const exDoneKeys = currentExercises.map((_,i)=>`${selectedDayIdx}-${wPlan}-${i}`);
   const exDoneCount = exDoneKeys.filter(k=>exDone[k]).length;
   const habitsDoneCount = habitsDone.filter(Boolean).length;
 
@@ -912,7 +913,7 @@ export default function App() {
   const filteredFoods = allFoods.filter(f=>f.name.toLowerCase().includes(foodSearch.toLowerCase()));
 
   function toggleEx(i) {
-    const k=`${dayIdx}-${wPlan}-${i}`;
+    const k=`${selectedDayIdx}-${wPlan}-${i}`;
     setExDone(p=>{
       const n={...p,[k]:!p[k]};
       try { localStorage.setItem('rebuild_ex_done_'+getWeekKey(), JSON.stringify(n)); } catch {}
@@ -922,8 +923,8 @@ export default function App() {
 
   function addCustomEx() {
     if(!exForm.name.trim()) return;
-    const dayExes = customExercises[dayIdx] || [];
-    setCustomExercises(p=>{ const n={...p,[dayIdx]:[...(p[dayIdx]||[]),{...exForm}]}; try{localStorage.setItem('rebuild_custom_ex',JSON.stringify(n))}catch{}; return n; });
+    const dayExes = customExercises[selectedDayIdx] || [];
+    setCustomExercises(p=>{ const n={...p,[selectedDayIdx]:[...(p[selectedDayIdx]||[]),{...exForm}]}; try{localStorage.setItem('rebuild_custom_ex',JSON.stringify(n))}catch{}; return n; });
     setExForm({name:"",sets:"3",reps:"10-12",rest:"60s",note:""});
   }
 
@@ -1217,7 +1218,7 @@ export default function App() {
                 {HAJAZ_PLAN.map((w,i)=>(
                   <button key={i} className={`day-pill ${dayIdx===i?"on":""}`}
                     style={dayIdx===i?{borderColor:w.color,color:w.color,background:w.color+"12"}:{}}
-                    onClick={()=>setDayIdx(i)}>{w.day}</button>
+                    onClick={()=>setSelectedDayIdx(i)}>{w.day}</button>
                 ))}
               </div>
 
@@ -1234,13 +1235,13 @@ export default function App() {
                     <input className="inp" placeholder="Note (optional)" value={exForm.note} onChange={e=>setExForm(p=>({...p,note:e.target.value}))}/>
                     <button className="btn-p" onClick={addCustomEx}>+ ADD EXERCISE</button>
                   </div>
-                  {(customExercises[dayIdx]||[]).length===0?(
+                  {(customExercises[selectedDayIdx]||[]).length===0?(
                     <div style={{textAlign:"center",padding:"24px 0",color:G.muted,fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:"15px",fontStyle:"italic"}}>No exercises yet for this day.</div>
                   ):(
                     <div className="custom-ex-list">
                       <div className="t-label sec-gap">{(customExercises[dayIdx]||[]).length} EXERCISES</div>
-                      {(customExercises[dayIdx]||[]).map((ex,i)=>{
-                        const k=`${dayIdx}-custom-${i}`;
+                      {(customExercises[selectedDayIdx]||[]).map((ex,i)=>{
+                        const k=`${selectedDayIdx}-custom-${i}`;
                         const done=!!exDone[k];
                         return(
                           <div key={i} className={`ex-card ${done?"done":""}`}>
@@ -1262,7 +1263,7 @@ export default function App() {
                             </div>
                             <button onClick={()=>{
                               setCustomExercises(p=>{
-                                const updated={...p,[dayIdx]:(p[dayIdx]||[]).filter((_,idx)=>idx!==i)};
+                                const updated={...p,[selectedDayIdx]:(p[selectedDayIdx]||[]).filter((_,idx)=>idx!==i)};
                                 try{localStorage.setItem('rebuild_custom_ex',JSON.stringify(updated))}catch{}
                                 return updated;
                               });
