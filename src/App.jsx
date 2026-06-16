@@ -666,6 +666,19 @@ export default function App() {
   const [wPlan, setWPlan] = useState(()=>{ try{return localStorage.getItem('rebuild_wplan')||'hajaz'}catch{return 'hajaz'} });
   const dayIdx = useMemo(()=>{ const d=new Date().getDay(); return d===0?6:d-1; }, []); // 0=Mon…6=Sun
   const [selectedDayIdx, setSelectedDayIdx] = useState(dayIdx);
+
+  // Auto-update day when app comes back into focus (e.g. next day)
+  useEffect(()=>{
+    const handleVisibility = ()=>{
+      if(document.visibilityState === 'visible'){
+        const d = new Date().getDay();
+        const todayIdx = d===0?6:d-1;
+        setSelectedDayIdx(todayIdx);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return ()=>document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
   const [exDone, setExDone] = useState(()=>{
     try {
       const wk = getWeekKey();
