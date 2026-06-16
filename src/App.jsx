@@ -1100,9 +1100,10 @@ export default function App() {
                   <div style={{display:"flex",gap:6,marginBottom:12}}>
                     {(lbData.length > 0 ? lbData.filter(r=>r).slice(0,3) : []).map((p,i)=>{
                       const colors=[G.gold,G.purple,G.accent];
+                      const homeRankEmojis=["🏆","⚡","🔥"];
                       return(
                       <div key={i} style={{flex:1,background:G.s2,borderRadius:10,padding:"8px 6px",textAlign:"center",border:`1px solid ${colors[i]}33`}}>
-                        <div style={{fontSize:16,marginBottom:2}}>{p.avatar||"💪"}</div>
+                        <div style={{fontSize:16,marginBottom:2}}>{homeRankEmojis[i]}</div>
                         <div style={{fontFamily:G.sans,fontSize:10,fontWeight:600,color:G.text}}>{(p.username||"User").split(" ")[0]}</div>
                         <div style={{fontFamily:G.mono,fontSize:10,color:colors[i],fontWeight:700}}>{p.score||0}</div>
                         <div style={{fontFamily:G.mono,fontSize:8,color:G.muted}}>#{i+1}</div>
