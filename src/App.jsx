@@ -1629,7 +1629,7 @@ export default function App() {
           {/* COMMUNITY */}
           {screen==="community"&&(()=>{
             const badges = ["🏆","🥈","🥉"];
-            const rankAvatars = ["🥇","🥈","🥉","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"];
+            const rankEmojis = ["🏆","⚡","🔥","🦁","💎","🦅","⚔️","🌙","🤲","💪"];
             const BOARD = lbData.length > 0 ? lbData.filter(r=>r!=null).map((r,i)=>({
               rank: r.rank || i+1,
               name: r.username || "User",
@@ -1699,10 +1699,7 @@ export default function App() {
                       return(
                         <div key={p.rank} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
                           {isFirst&&<div style={{fontFamily:G.mono,fontSize:9,color:G.gold,letterSpacing:"0.1em",marginBottom:2}}>👑 CHAMPION</div>}
-                          <div style={{position:"relative",display:"inline-block"}}>
-                            <div style={{fontSize:isFirst?28:22,filter:isFirst?"drop-shadow(0 0 8px "+G.gold+"88)":"none"}}>{p.avatar}</div>
-                            <div style={{position:"absolute",bottom:-4,right:-4,fontSize:12}}>{["🥇","🥈","🥉"][i]}</div>
-                          </div>
+                          <div style={{fontSize:isFirst?28:22,filter:isFirst?"drop-shadow(0 0 8px "+G.gold+"88)":"none"}}>{rankEmojis[p.rank-1]||"💪"}</div>
                           <div style={{fontFamily:G.sans,fontSize:isFirst?12:11,fontWeight:600,color:G.text,textAlign:"center",lineHeight:1.2}}>{p.name.split(" ")[0]}</div>
                           <div style={{fontFamily:G.mono,fontSize:isFirst?13:11,color:podiumColors[i],fontWeight:700}}>{p.score}</div>
                           <div style={{width:"100%",height:podiumH[i],background:`linear-gradient(180deg,${podiumColors[i]}33 0%,${podiumColors[i]}11 100%)`,border:`1px solid ${podiumColors[i]}44`,borderRadius:"8px 8px 0 0",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:6}}>
@@ -1719,10 +1716,7 @@ export default function App() {
                   {rest.map(p=>(
                     <div key={p.rank} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:12,background:G.surface,marginBottom:6,border:`1px solid ${G.border}`}}>
                       <div style={{fontFamily:G.mono,fontSize:11,color:G.muted,width:18,textAlign:"center"}}>#{p.rank}</div>
-                      <div style={{position:"relative",flexShrink:0}}>
-                        <div style={{fontSize:18}}>{p.avatar}</div>
-                        {p.rank<=3&&<div style={{position:"absolute",bottom:-4,right:-4,fontSize:10}}>{["🥇","🥈","🥉"][p.rank-1]}</div>}
-                      </div>
+                      <div style={{fontSize:18,flexShrink:0}}>{rankEmojis[p.rank-1]||"💪"}</div>
                       <div style={{flex:1}}>
                         <div style={{fontFamily:G.sans,fontSize:13,fontWeight:600,color:G.text}}>{p.name}</div>
 
@@ -1946,7 +1940,7 @@ export default function App() {
                   )}
                   {/* Emoji avatars */}
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"center",marginTop:4}}>
-                    {["💪","🦁","🔥","⚡","🏆","🌙","🤲","🦅","🐺","👑","🎯","⚔️","🛡️","🧠","💎","🌟","🔱","🐉","🦊","🏋️","🥊","🤜","🧲","⚙️","🌊","🦋","🌙","🕌","📿","☪️"].map(em=>(
+                    {["💪","🦁","🔥","⚡","🏆","🌙","🤲","🦅"].map(em=>(
                       <button key={em} onClick={()=>setProfileForm(p=>({...p,avatar:em,photo:null}))}
                         style={{width:36,height:36,borderRadius:10,border:`1.5px solid ${profileForm.avatar===em&&!profileForm.photo?G.accent:G.border}`,background:profileForm.avatar===em&&!profileForm.photo?G.accent+"22":G.s2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
                         {em}
