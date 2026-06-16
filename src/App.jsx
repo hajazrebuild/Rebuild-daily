@@ -857,7 +857,7 @@ export default function App() {
           try{localStorage.setItem('rebuild_completed_days',JSON.stringify(profileData.completed_days))}catch{}
         }
         if(profileData.quran_pages) setQuranPages(profileData.quran_pages);
-        if(profileData.khatam_page) setKhatamPage(profileData.khatam_page);
+        if(profileData.khatam_page != null) setKhatamPage(profileData.khatam_page);
         if(profileData.macro_targets) setCustomMacros(profileData.macro_targets);
       }
 
@@ -1415,7 +1415,15 @@ export default function App() {
                     <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:"15px",fontWeight:700}}>Khatam bookmark</div>
                     <div style={{fontSize:"11px",color:G.muted}}>Currently on page</div>
                   </div>
-                  <input className="quran-input" type="number" min="1" max="604" value={khatamPage} onChange={e=>{ const v=parseInt(e.target.value)||1; setKhatamPage(v); try{localStorage.setItem('rebuild_khatam_page',v)}catch{} }}/>
+                  <input className="quran-input" type="number" min="1" max="604" value={khatamPage} onChange={async e=>{ 
+                    const v=parseInt(e.target.value)||1; 
+                    setKhatamPage(v); 
+                    try{localStorage.setItem('rebuild_khatam_page',v)}catch{}
+                    // Save immediately to Supabase
+                    if(userId) {
+                      await supabase.from("profiles").upsert({ id: userId, username: userName, khatam_page: v }, { onConflict: "id" });
+                    }
+                  }}/>
                   <div style={{fontFamily:G.mono,fontSize:"10px",color:G.muted}}>/ 604</div>
                 </div>
 
