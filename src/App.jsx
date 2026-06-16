@@ -1217,8 +1217,17 @@ export default function App() {
             <div className="scr">
               <div className="ph">
                 <div className="t-label" style={{marginBottom:6}}>TODAY'S TRAINING</div>
-                <div className="page-title" style={{color:currentDay.color}}>{currentDay.label}</div>
-                <div style={{fontFamily:G.sans,fontSize:"9px",letterSpacing:"0.12em",color:G.muted,marginTop:3}}>{currentDay.focus.toUpperCase()}</div>
+                {wPlan === "custom" ? (
+                  <>
+                    <div className="page-title" style={{color:G.accent}}>MY PLAN</div>
+                    <div style={{fontFamily:G.sans,fontSize:"9px",letterSpacing:"0.12em",color:G.muted,marginTop:3}}>YOUR OWN PROGRAMME</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="page-title" style={{color:currentDay.color}}>{currentDay.label}</div>
+                    <div style={{fontFamily:G.sans,fontSize:"9px",letterSpacing:"0.12em",color:G.muted,marginTop:3}}>{currentDay.focus.toUpperCase()}</div>
+                  </>
+                )}
               </div>
 
               <div className="sec">
