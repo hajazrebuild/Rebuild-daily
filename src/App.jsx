@@ -837,12 +837,6 @@ export default function App() {
         setStreak(count);
       });
   }, [userId, score]);
-  // Auto-scroll calendar to today whenever home screen mounts
-  useEffect(()=>{
-    if(screen==="home" && calendarRef.current) {
-      setTimeout(()=>{ if(calendarRef.current) calendarRef.current.scrollLeft = calendarRef.current.scrollWidth; }, 80);
-    }
-  }, [screen]);
 
   const [lbData, setLbData] = React.useState([]);
   useEffect(()=>{
@@ -1087,7 +1081,7 @@ export default function App() {
               <div className="day-row" ref={calendarRef} style={{marginTop:4}}>
                 {Array.from({length:30}, (_,n)=>{
                   const d = new Date();
-                  d.setDate(d.getDate() - (29 - n));
+                  d.setDate(d.getDate() - n);
                   const dateStr = d.toISOString().split("T")[0];
                   const isToday = dateStr === currentDate;
                   const isSelected = pastDay?.date === dateStr;
