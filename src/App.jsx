@@ -838,6 +838,20 @@ export default function App() {
       });
   }, [userId, score]);
 
+  // Scroll calendar so today is visible (roughly centred)
+  useEffect(()=>{
+    if(screen==="home" && calendarRef.current) {
+      setTimeout(()=>{
+        const el = calendarRef.current;
+        if(!el) return;
+        const today = new Date().getDate();
+        const pillW = 56; // approximate pill width + gap
+        const scrollTo = (today - 1) * pillW - (el.clientWidth / 2) + (pillW / 2);
+        el.scrollLeft = Math.max(0, scrollTo);
+      }, 80);
+    }
+  }, [screen]);
+
   const [lbData, setLbData] = React.useState([]);
   useEffect(()=>{
     if(screen !== "community") return;
@@ -1077,30 +1091,37 @@ export default function App() {
                 )}
               </div>
 
-              {/* CALENDAR STRIP — last 30 days, scrolls to today */}
+              {/* CALENDAR STRIP — full current month, past left · today centre · future right */}
               <div className="day-row" ref={calendarRef} style={{marginTop:4}}>
-                {Array.from({length:30}, (_,n)=>{
-                  const d = new Date();
-                  d.setDate(d.getDate() - n);
-                  const dateStr = d.toISOString().split("T")[0];
-                  const isToday = dateStr === currentDate;
-                  const isSelected = pastDay?.date === dateStr;
-                  const entry = logHistory.find(h => h.log_date === dateStr);
-                  return (
-                    <button key={dateStr} className={`day-pill ${isToday&&!pastDay?"on":""}`}
-                      style={isToday&&!pastDay?{borderColor:G.accent,color:G.accent,background:G.accent+"12"}:isSelected?{borderColor:G.gold,color:G.text,background:G.gold+"12"}:{}}
-                      onClick={()=>{
-                        if(isToday){ setPastDay(null); return; }
-                        setPastDay({date:dateStr, data:null, loading:true});
-                        supabase.from("daily_logs").select("*").eq("user_id",userId).eq("log_date",dateStr).maybeSingle()
-                          .then(({data})=>setPastDay(prev=>prev?.date===dateStr?{date:dateStr,data:data||{log_date:dateStr,_noData:true},loading:false}:prev));
-                      }}>
-                      <div style={{fontFamily:G.mono,fontSize:9,color:isToday&&!pastDay?G.accent:isSelected?G.gold:G.muted,letterSpacing:"0.04em"}}>{d.toLocaleDateString("en-GB",{weekday:"short"}).toUpperCase()}</div>
-                      <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:17,fontWeight:600,color:isToday&&!pastDay?G.accent:isSelected?G.gold:entry?G.text:G.muted,lineHeight:1.1,marginTop:2}}>{d.getDate()}</div>
-                      <div style={{fontSize:7,marginTop:3,color:entry?G.accent:G.border}}>{entry?"●":"·"}</div>
-                    </button>
-                  );
-                })}
+                {(()=>{
+                  const today = new Date();
+                  const year = today.getFullYear();
+                  const month = today.getMonth();
+                  const daysInMonth = new Date(year, month+1, 0).getDate();
+                  return Array.from({length:daysInMonth}, (_,n)=>{
+                    const d = new Date(year, month, n+1);
+                    const dateStr = d.toISOString().split("T")[0];
+                    const isToday = dateStr === currentDate;
+                    const isFuture = d > today;
+                    const isSelected = pastDay?.date === dateStr;
+                    const entry = logHistory.find(h => h.log_date === dateStr);
+                    return (
+                      <button key={dateStr} className={`day-pill ${isToday&&!pastDay?"on":""}`}
+                        style={isToday&&!pastDay?{borderColor:G.accent,color:G.accent,background:G.accent+"12"}:isSelected?{borderColor:G.gold,color:G.text,background:G.gold+"12"}:isFuture?{opacity:0.35,cursor:"default"}:{}}
+                        onClick={()=>{
+                          if(isToday){ setPastDay(null); return; }
+                          if(isFuture) return;
+                          setPastDay({date:dateStr, data:null, loading:true});
+                          supabase.from("daily_logs").select("*").eq("user_id",userId).eq("log_date",dateStr).maybeSingle()
+                            .then(({data})=>setPastDay(prev=>prev?.date===dateStr?{date:dateStr,data:data||{log_date:dateStr,_noData:true},loading:false}:prev));
+                        }}>
+                        <div style={{fontFamily:G.mono,fontSize:9,color:isToday&&!pastDay?G.accent:isSelected?G.gold:G.muted,letterSpacing:"0.04em"}}>{d.toLocaleDateString("en-GB",{weekday:"short"}).toUpperCase()}</div>
+                        <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:17,fontWeight:600,color:isToday&&!pastDay?G.accent:isSelected?G.gold:entry?G.text:G.muted,lineHeight:1.1,marginTop:2}}>{d.getDate()}</div>
+                        <div style={{fontSize:7,marginTop:3,color:entry?G.accent:G.border}}>{entry?"●":"·"}</div>
+                      </button>
+                    );
+                  });
+                })()}
               </div>
 
               {/* PAST DAY VIEW or NORMAL HOME */}
