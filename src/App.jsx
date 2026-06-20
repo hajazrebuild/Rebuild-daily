@@ -609,7 +609,8 @@ export default function App() {
   const [screen, setScreen] = useState("onboard");
   const [authReady, setAuthReady] = useState(false);
   const [userId, setUserId] = React.useState(null);
-  const [modal, setModal] = useState(null); // "share"|"addEx"|"addHabit"|"customChallenge"|"addFood"|"setupMacros"|"profile"
+  const [modal, setModal] = useState(null); // "share"|"addEx"|"addHabit"|"customChallenge"|"addFood"|"setupMacros"|"profile"|"dayDetail"
+  const [viewedDay, setViewedDay] = useState(null); // the logHistory row tapped on the home calendar strip
 
   // Supabase auth session
   useEffect(()=>{
@@ -664,8 +665,9 @@ export default function App() {
 
   // Workout
   const [wPlan, setWPlan] = useState(()=>{ try{return localStorage.getItem('rebuild_wplan')||'hajaz'}catch{return 'hajaz'} });
-  const dayIdx = useMemo(()=>{ const d=new Date().getDay(); return d===0?6:d-1; }, []); // 0=Mon…6=Sun
+  const [dayIdx, setDayIdx] = useState(()=>{ const d=new Date().getDay(); return d===0?6:d-1; }); // 0=Mon…6=Sun
   const [selectedDayIdx, setSelectedDayIdx] = useState(dayIdx);
+  const [currentDate, setCurrentDate] = useState(()=> new Date().toISOString().split("T")[0]);
 
   // Auto-update day when app comes back into focus (e.g. next day)
   useEffect(()=>{
@@ -673,7 +675,12 @@ export default function App() {
       if(document.visibilityState === 'visible'){
         const d = new Date().getDay();
         const todayIdx = d===0?6:d-1;
+        const todayStr = new Date().toISOString().split("T")[0];
+        setDayIdx(todayIdx);
         setSelectedDayIdx(todayIdx);
+        // If the calendar date has actually rolled over since last check,
+        // flip currentDate so the daily_logs reload effect re-fetches fresh state.
+        setCurrentDate(prev => prev === todayStr ? prev : todayStr);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -786,7 +793,6 @@ export default function App() {
       username: userName,
       habits: habits,
       active_challenge: activeChallenge,
-      completed_days: [...completedDays],
       quran_pages: quranPages,
       khatam_page: khatamPage,
       macro_targets: customMacros,
@@ -798,15 +804,17 @@ export default function App() {
   // ── Supabase: load today's log ONCE when user first reaches home ──
   const [dbLoaded, setDbLoaded] = React.useState(false);
   const [streak, setStreak] = React.useState(0);
+  const [logHistory, setLogHistory] = React.useState([]); // last 365 days of daily_logs, for the calendar strip
   useEffect(()=>{
     if(!userId) return;
     supabase.from("daily_logs")
-      .select("log_date, score")
+      .select("log_date, score, prayers_done, exercises_done, exercises_total, habits_done, habits_total, calories_hit, sleep_hrs")
       .eq("user_id", userId)
       .gt("score", 0)
       .order("log_date", {ascending: false})
       .limit(365)
       .then(({ data })=>{
+        setLogHistory(data || []);
         if(!data || data.length === 0) { setStreak(0); return; }
         let count = 0;
         let check = new Date();
@@ -827,14 +835,13 @@ export default function App() {
     supabase.from("leaderboard").select("*").limit(10)
       .then(({ data })=>{ if(data && data.length > 0) setLbData(data); });
   }, [screen]);
-  const hasLoadedRef = React.useRef(false);
+  const hasLoadedProfileRef = React.useRef(false);
   useEffect(()=>{
-    if(screen !== "home" || hasLoadedRef.current) return;
-    hasLoadedRef.current = true;
-    async function loadData() {
+    if(screen !== "home" || hasLoadedProfileRef.current) return;
+    hasLoadedProfileRef.current = true;
+    async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser();
       if(!user) { setDbLoaded(true); return; }
-      const today = new Date().toISOString().split("T")[0];
 
       // Load profile data from Supabase
       const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
@@ -862,37 +869,61 @@ export default function App() {
       }
 
       try {
-        const { data } = await supabase.from("daily_logs").select("*").eq("user_id", user.id).eq("log_date", today).maybeSingle();
-
-        if(data) {
-          if(data.prayers_array) setPrayers(JSON.parse(data.prayers_array));
-          else if(data.prayers_done > 0) setPrayers(p => p.map((_,i) => i < data.prayers_done));
-          if(data.sleep_hrs > 0) { setSleepHrs(data.sleep_hrs); setSleepLogged(true); }
-          if(data.calories_hit) setCaloriesHit(data.calories_hit);
-          if(data.habits_done > 0) setHabitsDone(h => h.map((_,i) => i < data.habits_done));
-          if(data.ex_done) setExDone(JSON.parse(data.ex_done));
-          if(data.meals_done) setMealsDone(JSON.parse(data.meals_done));
-          if(data.custom_exercises) setCustomExercises(JSON.parse(data.custom_exercises));
-          if(data.w_plan) setWPlan(data.w_plan);
-        }
-      } catch(e) { console.error("DB load error:", e); }
-      setDbLoaded(true);
-      try {
         const { data: cp } = await supabase.from("challenge_progress").select("completed_days").eq("user_id", user.id).eq("challenge_id","75hard").maybeSingle();
         if(cp?.completed_days) setCompletedDays(new Set(cp.completed_days));
       } catch(e) {}
     }
-    loadData();
+    loadProfile();
   }, [screen]);
+
+  // ── Supabase: load (or reset) THIS day's log, re-runs whenever currentDate changes ──
+  // This is what actually fixes the midnight bug: instead of loading "today" once per
+  // session, it reloads whenever the real calendar date rolls over, and resets stale
+  // in-memory state to a clean slate when no row exists yet for the new date — so
+  // yesterday's checkmarks/score can never get carried forward and saved under today.
+  const lastLoadedDateRef = React.useRef(null);
+  useEffect(()=>{
+    if(screen !== "home" || !userId) return;
+    if(lastLoadedDateRef.current === currentDate) return;
+    lastLoadedDateRef.current = currentDate;
+    async function loadDailyLog() {
+      try {
+        const { data } = await supabase.from("daily_logs").select("*").eq("user_id", userId).eq("log_date", currentDate).maybeSingle();
+
+        if(data) {
+          setPrayers(data.prayers_array ? JSON.parse(data.prayers_array) : (data.prayers_done > 0 ? [false,false,false,false,false].map((_,i)=>i<data.prayers_done) : [false,false,false,false,false]));
+          setSleepHrs(data.sleep_hrs > 0 ? data.sleep_hrs : 0);
+          setSleepLogged(data.sleep_hrs > 0);
+          setCaloriesHit(!!data.calories_hit);
+          setHabitsDone(h => h.map((_,i) => i < (data.habits_done||0)));
+          setExDone(data.ex_done ? JSON.parse(data.ex_done) : {});
+          setMealsDone(data.meals_done ? JSON.parse(data.meals_done) : {});
+          if(data.custom_exercises) setCustomExercises(JSON.parse(data.custom_exercises));
+          if(data.w_plan) setWPlan(data.w_plan);
+        } else {
+          // No log exists yet for this date — reset to a clean slate rather than
+          // leaving whatever the previous day's state happened to be in memory.
+          setPrayers([false,false,false,false,false]);
+          setSleepHrs(0);
+          setSleepLogged(false);
+          setCaloriesHit(false);
+          setHabitsDone(h => h.map(()=>false));
+          setExDone({});
+          setMealsDone({});
+        }
+      } catch(e) { console.error("DB load error:", e); }
+      setDbLoaded(true);
+    }
+    loadDailyLog();
+  }, [screen, userId, currentDate]);
 
   // ── Supabase: save daily log (debounced 800ms, only after initial load) ──
   useEffect(()=>{
     if(!dbLoaded || !userId) return;
     const timer = setTimeout(()=>{
-      const today = new Date().toISOString().split("T")[0];
       supabase.from("daily_logs").upsert({
           user_id: userId,
-          log_date: today,
+          log_date: currentDate,
           prayers_done: prayerCount,
           prayers_array: JSON.stringify(prayers),
           sleep_hrs: sleepLogged ? sleepHrs : 0,
@@ -915,10 +946,13 @@ export default function App() {
             challenge_id: "75hard",
             completed_days: [...completedDays],
             updated_at: new Date().toISOString(),
-          }, { onConflict: "user_id,challenge_id" });
+          }, { onConflict: "user_id,challenge_id" }).then(({error}) => {
+            if(error) console.error("Challenge progress save failed:", JSON.stringify(error));
+            else console.log("Challenge progress saved ✓");
+          });
     }, 800);
     return () => clearTimeout(timer);
-  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises]);
+  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises, currentDate]);
 
   const challengeDay = completedDays.size;
   const earnedMilestones = MILESTONES.filter(m=>challengeDay>=m);
@@ -1009,6 +1043,27 @@ export default function App() {
                     🔥 {activeChallenge.name} · Day {challengeDay}
                   </div>
                 )}
+              </div>
+
+              {/* CALENDAR STRIP — last 14 real calendar dates, today highlighted by actual date match */}
+              <div className="day-row" style={{marginTop:4}}>
+                {Array.from({length:14}, (_,n)=>{
+                  const d = new Date();
+                  d.setDate(d.getDate() - (13 - n));
+                  const dateStr = d.toISOString().split("T")[0];
+                  const isToday = dateStr === currentDate;
+                  const entry = logHistory.find(h => h.log_date === dateStr);
+                  return (
+                    <button key={dateStr} className={`day-pill ${isToday?"on":""}`}
+                      style={isToday?{borderColor:G.accent,color:G.accent,background:G.accent+"12"}:{}}
+                      onClick={()=>{ if(isToday) return; setViewedDay({...(entry||{}), log_date: dateStr}); setModal("dayDetail"); }}>
+                      <div>{d.toLocaleDateString("en-GB",{weekday:"short"}).toUpperCase()}</div>
+                      <div style={{fontSize:11,fontWeight:700,marginTop:2,color: entry ? (isToday?G.accent:G.text) : G.border}}>
+                        {entry ? entry.score : "—"}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="quote-c">
@@ -1777,6 +1832,41 @@ export default function App() {
           {/* ── MODALS ── */}
 
           {/* SHARE */}
+          {modal==="dayDetail"&&viewedDay&&(
+            <div className="overlay" onClick={()=>setModal(null)}>
+              <div className="sheet" onClick={e=>e.stopPropagation()}>
+                <div className="sheet-handle"/>
+                <div className="sheet-title">{new Date(viewedDay.log_date).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
+                <div className="sheet-sub">{viewedDay.score != null ? "Day summary" : "No activity logged this day"}</div>
+                {viewedDay.score != null ? (
+                  <>
+                    <div className="card card-accent" style={{marginBottom:16}}>
+                      <div className="t-label" style={{marginBottom:8}}>DISCIPLINE SCORE</div>
+                      <div className="score-num" style={{color:G.accent}}>{viewedDay.score}</div>
+                    </div>
+                    <div className="stats-grid">
+                      {[
+                        {l:"PRAYERS",v:`${viewedDay.prayers_done||0}/5`,c:"#8a7a6a"},
+                        {l:"EXERCISES",v:`${viewedDay.exercises_done||0}/${viewedDay.exercises_total||0}`,c:"#7a8a6a"},
+                        {l:"HABITS",v:`${viewedDay.habits_done||0}/${viewedDay.habits_total||0}`,c:"#6a7a8a"},
+                        {l:"SLEEP",v: viewedDay.sleep_hrs ? `${viewedDay.sleep_hrs}h` : "—", c:"#7a6a8a"},
+                        {l:"NUTRITION",v: viewedDay.calories_hit ? "Hit ✓" : "Missed", c:"#8a6a7a"},
+                      ].map((s,i)=>(
+                        <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:16,padding:"16px 15px",borderTop:`1px solid ${s.c}55`}}>
+                          <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:20,fontWeight:600,letterSpacing:"-0.02em",color:G.text,lineHeight:1,marginBottom:6}}>{s.v}</div>
+                          <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,letterSpacing:"0.1em"}}>{s.l}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="card-sm" style={{color:G.muted,fontSize:13}}>Nothing was logged on this day.</div>
+                )}
+                <button className="btn-sec" style={{marginTop:16}} onClick={()=>setModal(null)}>Close</button>
+              </div>
+            </div>
+          )}
+
           {modal==="share"&&(
             <div className="overlay" onClick={()=>setModal(null)}>
               <div className="sheet" onClick={e=>e.stopPropagation()}>
