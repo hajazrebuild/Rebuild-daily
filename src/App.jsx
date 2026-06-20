@@ -721,7 +721,7 @@ export default function App() {
     } catch { return []; }
   });
   const [foodSearch, setFoodSearch] = useState("");
-  const [customFoods, setCustomFoods] = useState([]);
+  const [customFoods, setCustomFoods] = useState(()=>{ try{ const s=localStorage.getItem('rebuild_custom_foods'); return s?JSON.parse(s):[]; }catch{return [];} });
   const [customFoodForm, setCustomFoodForm] = useState({name:"",per:"100",unit:"g",kcal:"",protein:"",carbs:"",fat:""});
   const [macroForm, setMacroForm] = useState({...customMacros});
 
@@ -801,8 +801,9 @@ export default function App() {
       quran_pages: quranPages,
       khatam_page: khatamPage,
       macro_targets: customMacros,
+      custom_foods: customFoods,
     }, { onConflict: "id" });
-  }, [habits, activeChallenge, completedDays, quranPages, khatamPage, customMacros, userId]);
+  }, [habits, activeChallenge, completedDays, quranPages, khatamPage, customMacros, customFoods, userId]);
 
   const score = useMemo(()=>calcScore(prayerCount, exDoneCount, currentExercises.length, habitsDoneCount, habits.length, caloriesHit, sleepLogged ? sleepHrs : 0),[prayerCount,exDoneCount,currentExercises.length,habitsDoneCount,habits.length,caloriesHit,sleepLogged,sleepHrs]);
 
@@ -871,6 +872,10 @@ export default function App() {
         if(profileData.quran_pages) setQuranPages(profileData.quran_pages);
         if(profileData.khatam_page != null) setKhatamPage(profileData.khatam_page);
         if(profileData.macro_targets) setCustomMacros(profileData.macro_targets);
+        if(profileData.custom_foods && profileData.custom_foods.length > 0) {
+          setCustomFoods(profileData.custom_foods);
+          try{localStorage.setItem('rebuild_custom_foods',JSON.stringify(profileData.custom_foods))}catch{}
+        }
       }
 
       try {
@@ -905,10 +910,12 @@ export default function App() {
           setMealsDone(data.meals_done ? JSON.parse(data.meals_done) : {});
           if(data.custom_exercises) setCustomExercises(JSON.parse(data.custom_exercises));
           if(data.w_plan) setWPlan(data.w_plan);
+          if(data.tahajjud != null) setTahajjud(!!data.tahajjud);
         } else {
           // No log exists yet for this date — reset to a clean slate rather than
           // leaving whatever the previous day's state happened to be in memory.
           setPrayers([false,false,false,false,false]);
+          setTahajjud(false);
           setSleepHrs(0);
           setSleepLogged(false);
           setCaloriesHit(false);
@@ -931,6 +938,7 @@ export default function App() {
           log_date: currentDate,
           prayers_done: prayerCount,
           prayers_array: JSON.stringify(prayers),
+          tahajjud: tahajjud,
           sleep_hrs: sleepLogged ? sleepHrs : 0,
           exercises_done: exDoneCount,
           exercises_total: currentExercises.length,
@@ -997,7 +1005,7 @@ export default function App() {
   function addCustomFood() {
     if(!customFoodForm.name||!customFoodForm.kcal) return;
     const f={id:"cf_"+Date.now(),name:customFoodForm.name,per:parseFloat(customFoodForm.per)||100,unit:customFoodForm.unit||"g",kcal:parseFloat(customFoodForm.kcal)||0,protein:parseFloat(customFoodForm.protein)||0,carbs:parseFloat(customFoodForm.carbs)||0,fat:parseFloat(customFoodForm.fat)||0};
-    setCustomFoods(p=>[...p,f]);
+    setCustomFoods(p=>{ const n=[...p,f]; try{localStorage.setItem('rebuild_custom_foods',JSON.stringify(n))}catch{}; return n; });
     setCustomFoodForm({name:"",per:"100",unit:"g",kcal:"",protein:"",carbs:"",fat:""});
   }
 
