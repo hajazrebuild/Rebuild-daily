@@ -1759,7 +1759,6 @@ export default function App() {
               {rank:10,name:"Musa J.",avatar:"⚡",score:64,streak:4,badge:null},
             ];
             const userEntry = lbData.find(r => r && r.username === userName);
-            const userInTop10 = userEntry && userEntry.rank <= BOARD.length;
             const userRank={rank: userEntry?.rank || "—", name:userName||"You",avatar:profile?.avatar||"💪",score:userEntry?.score ?? score,streak:challengeDay,badge:null,isUser:true};
             const podium=BOARD.slice(0,3);
             const rest=BOARD.slice(3);
@@ -1835,8 +1834,8 @@ export default function App() {
                     </div>
                   ))}
 
-                  {/* User's own rank — pinned (only when not already in top 10) */}
-                  {!userInTop10&&<div style={{marginTop:8,marginBottom:8}}>
+                  {/* User's own rank — always pinned at bottom */}
+                  <div style={{marginTop:8,marginBottom:8}}>
                     <div style={{height:1,background:G.border,marginBottom:8}}/>
                     <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:12,background:`${G.accent}11`,border:`1px solid ${G.accent}33`}}>
                       <div style={{fontFamily:G.mono,fontSize:11,color:G.accent,width:18,textAlign:"center"}}>#{userRank.rank}</div>
@@ -1847,7 +1846,7 @@ export default function App() {
                       </div>
                       <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:16,fontWeight:700,color:G.accent}}>{userRank.score}</div>
                     </div>
-                  </div>}
+                  </div>
                 </div>
 
                 <div style={{height:100}}/>
