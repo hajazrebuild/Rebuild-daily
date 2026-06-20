@@ -732,7 +732,7 @@ export default function App() {
       return saved ? JSON.parse(saved) : DEFAULT_HABITS;
     } catch { return DEFAULT_HABITS; }
   });
-  const [habitsDone, setHabitsDone] = useState(Array(DEFAULT_HABITS.length).fill(false));
+  const [habitsDone, setHabitsDone] = useState(()=>{ try{ const saved=localStorage.getItem('rebuild_habits'); const h=saved?JSON.parse(saved):DEFAULT_HABITS; return Array(h.length).fill(false); }catch{ return Array(DEFAULT_HABITS.length).fill(false); } });
   const [habitForm, setHabitForm] = useState({name:"",icon:"⭐",pts:"10"});
 
   // Sleep
@@ -879,8 +879,11 @@ export default function App() {
       }
 
       try {
-        const { data: cp } = await supabase.from("challenge_progress").select("completed_days").eq("user_id", user.id).eq("challenge_id","75hard").maybeSingle();
-        if(cp?.completed_days) setCompletedDays(new Set(cp.completed_days));
+        const activeCh = JSON.parse(localStorage.getItem('rebuild_challenge') || 'null');
+        if(activeCh?.id) {
+          const { data: cp } = await supabase.from("challenge_progress").select("completed_days").eq("user_id", user.id).eq("challenge_id", activeCh.id).maybeSingle();
+          if(cp?.completed_days) setCompletedDays(new Set(cp.completed_days));
+        }
       } catch(e) {}
     }
     loadProfile();
@@ -954,15 +957,17 @@ export default function App() {
           if(error) console.error("Save failed:", JSON.stringify(error));
           else console.log("Save success!");
         });
-        supabase.from("challenge_progress").upsert({
-            user_id: userId,
-            challenge_id: "75hard",
-            completed_days: [...completedDays],
-            updated_at: new Date().toISOString(),
-          }, { onConflict: "user_id,challenge_id" }).then(({error}) => {
-            if(error) console.error("Challenge progress save failed:", JSON.stringify(error));
-            else console.log("Challenge progress saved ✓");
-          });
+        if(activeChallenge) {
+          supabase.from("challenge_progress").upsert({
+              user_id: userId,
+              challenge_id: activeChallenge.id,
+              completed_days: [...completedDays],
+              updated_at: new Date().toISOString(),
+            }, { onConflict: "user_id,challenge_id" }).then(({error}) => {
+              if(error) console.error("Challenge progress save failed:", JSON.stringify(error));
+              else console.log("Challenge progress saved ✓");
+            });
+        }
     }, 800);
     return () => clearTimeout(timer);
   }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises, currentDate]);
@@ -2171,8 +2176,12 @@ export default function App() {
                   <div style={{fontFamily:G.body,fontSize:11,color:G.muted,marginTop:3,fontStyle:"italic"}}>"Verily, with hardship comes ease." — 94:6</div>
                 </div>
 
-                <button className="btn-p" style={{marginTop:8}} onClick={()=>{
-                  if(nameEdit.trim()) setUserName(nameEdit.trim());
+                <button className="btn-p" style={{marginTop:8}} onClick={async()=>{
+                  const newName = nameEdit.trim();
+                  if(newName) {
+                    setUserName(newName);
+                    if(userId) await supabase.from("profiles").upsert({ id:userId, username:newName }, { onConflict:"id" });
+                  }
                   setSleepHrs(settingsForm.sleepTarget);
                   setSettings(settingsForm);
                   try { localStorage.setItem("rebuild_settings",JSON.stringify(settingsForm)); } catch {}
