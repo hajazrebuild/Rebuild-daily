@@ -838,17 +838,17 @@ export default function App() {
       });
   }, [userId, score]);
 
-  // Scroll calendar so today is visible (roughly centred)
+  const todayPillRef = React.useRef(null);
+  // Scroll today pill to left edge of calendar on mount
   useEffect(()=>{
-    if(screen==="home" && calendarRef.current) {
+    if(screen==="home") {
       setTimeout(()=>{
-        const el = calendarRef.current;
-        if(!el) return;
-        const today = new Date().getDate();
-        const pillW = 56; // approximate pill width + gap
-        const scrollTo = (today - 1) * pillW - (el.clientWidth / 2) + (pillW / 2);
-        el.scrollLeft = Math.max(0, scrollTo);
-      }, 80);
+        if(todayPillRef.current && calendarRef.current) {
+          const pill = todayPillRef.current;
+          const container = calendarRef.current;
+          container.scrollLeft = pill.offsetLeft - 24;
+        }
+      }, 100);
     }
   }, [screen]);
 
@@ -1106,7 +1106,7 @@ export default function App() {
                     const isSelected = pastDay?.date === dateStr;
                     const entry = logHistory.find(h => h.log_date === dateStr);
                     return (
-                      <button key={dateStr} className={`day-pill ${isToday&&!pastDay?"on":""}`}
+                      <button key={dateStr} ref={isToday?todayPillRef:null} className={`day-pill ${isToday&&!pastDay?"on":""}`}
                         style={isToday&&!pastDay?{borderColor:G.accent,color:G.accent,background:G.accent+"12"}:isSelected?{borderColor:G.gold,color:G.text,background:G.gold+"12"}:isFuture?{opacity:0.35,cursor:"default"}:{}}
                         onClick={()=>{
                           if(isToday){ setPastDay(null); return; }
