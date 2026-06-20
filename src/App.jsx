@@ -743,6 +743,7 @@ export default function App() {
   const [caloriesHit, setCaloriesHit] = useState(false);
   const [mealsDone, setMealsDone] = useState({});
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmChallengeSwitch, setConfirmChallengeSwitch] = useState(null); // holds the new challenge to switch to
   const quote = useMemo(()=>QUOTES[Math.floor(Math.random()*QUOTES.length)],[]);
 
   const prayerCount = prayers.filter(Boolean).length;
@@ -826,7 +827,7 @@ export default function App() {
         let check = new Date();
         check.setHours(0,0,0,0);
         for(let i = 0; i < data.length; i++){
-          const d = new Date(data[i].log_date);
+          const d = new Date(data[i].log_date+"T00:00:00");
           d.setHours(0,0,0,0);
           const diff = Math.round((check - d) / 86400000);
           if(diff === 0 || diff === 1){ count++; check = d; }
@@ -1265,7 +1266,7 @@ export default function App() {
               <div className="sec">
                 <div className="t-label sec-gap">ALL CHALLENGES</div>
 
-                <div className="ch-card" style={{"--cc":G.muted}} onClick={()=>setActiveChallenge(()=>{ const v=null; try{localStorage.setItem('rebuild_challenge',JSON.stringify(v))}catch{}; return v; })}>
+                <div className="ch-card" style={{"--cc":G.muted}} onClick={()=>{ if(activeChallenge) setConfirmChallengeSwitch(null); else null; }}>
                   <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:G.muted,borderRadius:"18px 0 0 18px"}}/>
                   <div className="ch-name" style={{color:G.text}}>No Challenge</div>
                   <div className="ch-desc">Run the app freely without a challenge timer.</div>
@@ -1274,7 +1275,7 @@ export default function App() {
 
                 {CHALLENGES.map(ch=>(
                   <div key={ch.id} className={`ch-card ${activeChallenge?.id===ch.id?"on":""}`} style={{"--cc":ch.color}}
-                    onClick={()=>{ if(ch.id==="custom"){setModal("customChallenge");}else{setActiveChallenge(()=>{ const v=ch; try{localStorage.setItem('rebuild_challenge',JSON.stringify(v))}catch{}; return v; });setCompletedDays(new Set());} }}>
+                    onClick={()=>{ if(ch.id==="custom"){setModal("customChallenge");}else if(activeChallenge&&activeChallenge.id!==ch.id){setConfirmChallengeSwitch(ch);}else if(!activeChallenge){setActiveChallenge(ch);try{localStorage.setItem('rebuild_challenge',JSON.stringify(ch))}catch{};setCompletedDays(new Set());} }}>
                     <div className="ch-name" style={{color:ch.color}}>{ch.name}</div>
                     <div className="ch-desc">{ch.desc}</div>
                     <div className="ch-days-lbl" style={{color:ch.color}}>📅 {ch.days||"?"} DAYS</div>
@@ -1312,9 +1313,9 @@ export default function App() {
 
               <div className="day-row">
                 {HAJAZ_PLAN.map((w,i)=>(
-                  <button key={i} className={`day-pill ${dayIdx===i?"on":""}`}
-                    style={dayIdx===i?{borderColor:w.color,color:w.color,background:w.color+"12"}:{}}
-                    onClick={()=>setSelectedDayIdx(i)}>{w.day}</button>
+                  <button key={i} className={`day-pill ${selectedDayIdx===i?"on":""}`}
+                    style={selectedDayIdx===i?{borderColor:w.color,color:w.color,background:w.color+"12"}:dayIdx===i?{borderColor:G.muted,color:G.muted}:{}}
+                    onClick={()=>{haptic();setSelectedDayIdx(i);}}>{w.day}{dayIdx===i&&selectedDayIdx!==i?<span style={{fontSize:6,color:G.accent,marginLeft:2}}>●</span>:null}</button>
                 ))}
               </div>
 
@@ -1861,7 +1862,7 @@ export default function App() {
             <div className="overlay" onClick={()=>setModal(null)}>
               <div className="sheet" onClick={e=>e.stopPropagation()}>
                 <div className="sheet-handle"/>
-                <div className="sheet-title">{new Date(viewedDay.log_date).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
+                <div className="sheet-title">{new Date(viewedDay.log_date+"T00:00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
                 <div className="sheet-sub">{viewedDay.score != null ? "Day summary" : "No activity logged this day"}</div>
                 {viewedDay.score != null ? (
                   <>
@@ -2275,6 +2276,34 @@ export default function App() {
                   YES, RESET TODAY
                 </button>
                 <button onClick={()=>setConfirmReset(false)} className="btn-sec">Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {/* CONFIRM CHALLENGE SWITCH */}
+          {confirmChallengeSwitch !== null && (
+            <div className="overlay" onClick={()=>setConfirmChallengeSwitch(null)}>
+              <div className="sheet" onClick={e=>e.stopPropagation()} style={{paddingBottom:32}}>
+                <div className="sheet-handle"/>
+                <div style={{textAlign:"center",marginBottom:20}}>
+                  <div style={{fontSize:36,marginBottom:12}}>⚡</div>
+                  <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:17,fontWeight:700,color:G.text,marginBottom:8}}>
+                    {confirmChallengeSwitch ? `Switch to ${confirmChallengeSwitch.name}?` : "End your challenge?"}
+                  </div>
+                  <div style={{fontFamily:G.body,fontSize:13,color:G.muted,lineHeight:1.5}}>
+                    {activeChallenge ? `Your current progress on ${activeChallenge.name} will be reset. This cannot be undone.` : ""}
+                  </div>
+                </div>
+                <button onClick={()=>{
+                  const next = confirmChallengeSwitch;
+                  setActiveChallenge(next);
+                  try{localStorage.setItem('rebuild_challenge',JSON.stringify(next))}catch{}
+                  setCompletedDays(new Set());
+                  setConfirmChallengeSwitch(null);
+                }} style={{width:"100%",background:confirmChallengeSwitch?confirmChallengeSwitch.color:"#c0392b",color:"white",border:"none",borderRadius:12,padding:"14px",fontFamily:G.mono,fontSize:12,fontWeight:700,cursor:"pointer",letterSpacing:"0.08em",marginBottom:8}}>
+                  {confirmChallengeSwitch ? `YES, SWITCH TO ${confirmChallengeSwitch.name.toUpperCase()}` : "YES, END CHALLENGE"}
+                </button>
+                <button onClick={()=>setConfirmChallengeSwitch(null)} className="btn-sec">Cancel</button>
               </div>
             </div>
           )}
