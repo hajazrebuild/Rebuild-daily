@@ -799,12 +799,11 @@ export default function App() {
       username: userName,
       habits: habits,
       active_challenge: activeChallenge,
-      quran_pages: quranPages,
       khatam_page: khatamPage,
       macro_targets: customMacros,
       custom_foods: customFoods,
     }, { onConflict: "id" });
-  }, [habits, activeChallenge, completedDays, quranPages, khatamPage, customMacros, customFoods, userId]);
+  }, [habits, activeChallenge, completedDays, khatamPage, customMacros, customFoods, userId]);
 
   const score = useMemo(()=>calcScore(prayerCount, exDoneCount, currentExercises.length, habitsDoneCount, habits.length, caloriesHit, sleepLogged ? sleepHrs : 0),[prayerCount,exDoneCount,currentExercises.length,habitsDoneCount,habits.length,caloriesHit,sleepLogged,sleepHrs]);
 
@@ -870,7 +869,6 @@ export default function App() {
           setCompletedDays(new Set(profileData.completed_days));
           try{localStorage.setItem('rebuild_completed_days',JSON.stringify(profileData.completed_days))}catch{}
         }
-        if(profileData.quran_pages) setQuranPages(profileData.quran_pages);
         if(profileData.khatam_page != null) setKhatamPage(profileData.khatam_page);
         if(profileData.macro_targets) setCustomMacros(profileData.macro_targets);
         if(profileData.custom_foods && profileData.custom_foods.length > 0) {
@@ -916,6 +914,7 @@ export default function App() {
           if(data.w_plan) setWPlan(data.w_plan);
           if(data.tahajjud != null) setTahajjud(!!data.tahajjud);
           if(data.quran_pages != null) setQuranPages(data.quran_pages);
+          if(data.food_entries) { try{ setFoodEntries(JSON.parse(data.food_entries)); }catch{} }
         } else {
           // No log exists yet for this date — reset to a clean slate rather than
           // leaving whatever the previous day's state happened to be in memory.
@@ -928,6 +927,7 @@ export default function App() {
           setHabitsDone(h => h.map(()=>false));
           setExDone({});
           setMealsDone({});
+          setFoodEntries([]);
         }
       } catch(e) { console.error("DB load error:", e); }
       setDbLoaded(true);
@@ -957,6 +957,7 @@ export default function App() {
           meals_done: JSON.stringify(mealsDone),
           custom_exercises: JSON.stringify(customExercises),
           w_plan: wPlan,
+          food_entries: JSON.stringify(foodEntries),
         }, { onConflict: "user_id,log_date" }).then(({error}) => {
           if(error) console.error("Save failed:", JSON.stringify(error));
           else console.log("Save success!");
@@ -974,7 +975,7 @@ export default function App() {
         }
     }, 800);
     return () => clearTimeout(timer);
-  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises, currentDate, tahajjud, quranPages]);
+  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises, currentDate, tahajjud, quranPages, foodEntries]);
 
   const challengeDay = completedDays.size;
   const earnedMilestones = MILESTONES.filter(m=>challengeDay>=m);
