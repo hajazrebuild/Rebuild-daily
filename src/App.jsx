@@ -754,7 +754,13 @@ export default function App() {
 
   // Misc
   const [caloriesHit, setCaloriesHit] = useState(false);
-  const [mealsDone, setMealsDone] = useState({});
+  const [mealsDone, setMealsDone] = useState(()=>{
+    try {
+      const today = (()=>{ const p=n=>String(n).padStart(2,'0'); const d=new Date(); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; })();
+      const saved = localStorage.getItem('rebuild_mealsDone_'+today);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmChallengeSwitch, setConfirmChallengeSwitch] = useState(null); // holds the new challenge to switch to
   const quote = useMemo(()=>QUOTES[Math.floor(Math.random()*QUOTES.length)],[]);
@@ -810,6 +816,13 @@ export default function App() {
       localStorage.setItem('rebuild_habitsDone_'+today, JSON.stringify(habitsDone));
     } catch {}
   }, [habitsDone]);
+
+  useEffect(()=>{
+    try {
+      const today = localDateStr();
+      localStorage.setItem('rebuild_mealsDone_'+today, JSON.stringify(mealsDone));
+    } catch {}
+  }, [mealsDone]);
 
   // ── Supabase: sync profile data when key state changes ──────────
   useEffect(()=>{
@@ -1239,7 +1252,7 @@ export default function App() {
                               </div>
                             );
                           }) : (
-                            <PRow label="Exercises" value={`${d.exercises_done||0}/${d.exercises_total||0} done`} color={G.accent} border={false}/>
+                            <PRow label="Exercises" value={d.exercises_done>0?`${d.exercises_done} done`:"No exercises planned"} color={d.exercises_done>0?G.accent:G.muted} border={false}/>
                           )}
                         </div>
 
@@ -1309,7 +1322,7 @@ export default function App() {
                     <div className="stats-grid">
                       {[
                         {val:`${prayerCount}/5`,lbl:"PRAYERS",c:"#8a7a6a"},
-                        {val:`${exDoneCount}/${currentExercises.length||0}`,lbl:"EXERCISES",c:"#7a8a6a"},
+                        {val:currentDay.run?"RUN 🏃":currentDay.ayah?"REST 🌿":currentExercises.length===0?"—":`${exDoneCount}/${currentExercises.length}`,lbl:"EXERCISES",c:"#7a8a6a"},
                         {val:`${habitsDoneCount}/${habits.length}`,lbl:"HABITS",c:"#6a7a8a"},
                         {val:sleepLogged?`${sleepHrs}h`:"—",lbl:"SLEEP",c:"#7a6a8a"},
                       ].map((s,i)=>(
@@ -2008,7 +2021,7 @@ export default function App() {
                 <div style={{padding:"0 24px",flex:1}}>
                   {rest.map(p=>(
                     <div key={p.rank} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:12,background:G.surface,marginBottom:6,border:`1px solid ${G.border}`}}>
-                      <div style={{fontFamily:G.mono,fontSize:11,color:G.muted,width:18,textAlign:"center"}}>#{p.rank}</div>
+                      <div style={{fontFamily:G.mono,fontSize:11,color:G.muted,minWidth:28,textAlign:"center"}}>#{p.rank}</div>
                       <div style={{fontSize:18,flexShrink:0}}>{rankEmojis[p.rank-1]||"💪"}</div>
                       <div style={{flex:1}}>
                         <div style={{fontFamily:G.sans,fontSize:13,fontWeight:600,color:G.text}}>{p.name}</div>
