@@ -606,7 +606,8 @@ function getWeekKey() {
   const now = new Date();
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-  return monday.toISOString().split('T')[0];
+  const p=n=>String(n).padStart(2,'0');
+  return `${monday.getFullYear()}-${p(monday.getMonth()+1)}-${p(monday.getDate())}`;
 }
 
 export default function App() {
@@ -674,7 +675,8 @@ export default function App() {
   const [wPlan, setWPlan] = useState(()=>{ try{return localStorage.getItem('rebuild_wplan')||'hajaz'}catch{return 'hajaz'} });
   const [dayIdx, setDayIdx] = useState(()=>{ const d=new Date().getDay(); return d===0?6:d-1; }); // 0=Mon…6=Sun
   const [selectedDayIdx, setSelectedDayIdx] = useState(dayIdx);
-  const [currentDate, setCurrentDate] = useState(()=> new Date().toISOString().split("T")[0]);
+  const localDateStr = (d=new Date())=>{ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; };
+  const [currentDate, setCurrentDate] = useState(()=> localDateStr());
 
   // Auto-update day when app comes back into focus (e.g. next day)
   useEffect(()=>{
@@ -682,7 +684,7 @@ export default function App() {
       if(document.visibilityState === 'visible'){
         const d = new Date().getDay();
         const todayIdx = d===0?6:d-1;
-        const todayStr = new Date().toISOString().split("T")[0];
+        const todayStr = localDateStr();
         setDayIdx(todayIdx);
         setSelectedDayIdx(todayIdx);
         // If the calendar date has actually rolled over since last check,
@@ -717,7 +719,7 @@ export default function App() {
   });
   const [foodEntries, setFoodEntries] = useState(()=>{
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = localDateStr();
       const saved = localStorage.getItem('rebuild_food_'+today);
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
@@ -788,7 +790,7 @@ export default function App() {
 
   useEffect(()=>{
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = localDateStr();
       localStorage.setItem('rebuild_food_'+today, JSON.stringify(foodEntries));
     } catch {}
   }, [foodEntries]);
@@ -1100,7 +1102,7 @@ export default function App() {
                   const daysInMonth = new Date(year, month+1, 0).getDate();
                   return Array.from({length:daysInMonth}, (_,n)=>{
                     const d = new Date(year, month, n+1);
-                    const dateStr = d.toISOString().split("T")[0];
+                    const dateStr = localDateStr(d);
                     const isToday = dateStr === currentDate;
                     const isFuture = d > today;
                     const isSelected = pastDay?.date === dateStr;
@@ -1848,7 +1850,7 @@ export default function App() {
                       const diff = i - todayIdx;
                       const d = new Date();
                       d.setDate(d.getDate() + diff);
-                      const dateStr = d.toISOString().split("T")[0];
+                      const dateStr = localDateStr(d);
                       const logged = logHistory.find(h => h.log_date === dateStr && h.score > 0);
                       const isToday = i === todayIdx;
                       const isFuture = i > todayIdx;
