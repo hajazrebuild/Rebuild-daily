@@ -362,6 +362,11 @@ const Ic = {
   community:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="19" cy="8" r="2"/><path d="M23 21v-1.5a3 3 0 00-2-2.83"/></svg>,
 };
 
+// ── Haptic feedback helper ────────────────────────────────────────────────────
+function haptic(ms = 8) {
+  try { if(navigator.vibrate) navigator.vibrate(ms); } catch {}
+}
+
 function calcScore(prayers, exDone, exTotal, habDone, habTotal, calHit, sleepHrs) {
   const faith = (prayers / 5) * 30;
   const train = exTotal > 0 ? (exDone / exTotal) * 25 : 0;
@@ -1401,7 +1406,7 @@ export default function App() {
                     const done=!!exDone[k];
                     return(
                       <div key={i} className={`ex-card ${done?"done":""}`}>
-                        <div className={`ex-chk ${done?"on":""}`} onClick={()=>toggleEx(i)}>{done&&"✓"}</div>
+                        <div className={`ex-chk ${done?"on":""}`} onClick={()=>{haptic(10);toggleEx(i);}}>{done&&"✓"}</div>
                         <div style={{flex:1}}>
                           <div className="ex-name" style={{textDecoration:done?"line-through":"none"}}>{ex.name}</div>
                           <div className="tags">
@@ -1442,7 +1447,7 @@ export default function App() {
 
                 {/* 5 Fard */}
                 {["Fajr","Dhuhr","Asr","Maghrib","Isha"].map((p,i)=>(
-                  <div key={i} className="pr-item" onClick={()=>setPrayers(prev=>{const n=[...prev];n[i]=!n[i];return n;})}>
+                  <div key={i} className="pr-item" onClick={()=>{haptic(10);setPrayers(prev=>{const n=[...prev];n[i]=!n[i];return n;});}}>
                     <div className={`pr-icon ${prayers[i]?"on":""}`}>{["🌙","☀️","🌤","🌅","🌃"][i]}</div>
                     <div style={{flex:1}}>
                       <div className="pr-name">{p}</div>
@@ -1453,7 +1458,7 @@ export default function App() {
                 ))}
 
                 {/* Tahajjud */}
-                <div className="pr-item" onClick={()=>setTahajjud(p=>!p)}>
+                <div className="pr-item" onClick={()=>{haptic(10);setTahajjud(p=>!p);}}>
                   <div className={`pr-icon ${tahajjud?"on":""}`} style={tahajjud?{borderColor:G.gold,background:"rgba(201,168,76,0.1)"}:{}}>⭐</div>
                   <div style={{flex:1}}>
                     <div className="pr-name">Tahajjud</div>
@@ -1612,7 +1617,7 @@ export default function App() {
                       <div key={i} className="meal-c" style={{opacity:mDone?0.45:1,transition:"opacity 0.2s"}}>
                         <div className="meal-head">
                           <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                            <div className={`ex-chk ${mDone?"on":""}`} onClick={()=>setMealsDone(p=>({...p,[i]:!p[i]}))}>{mDone&&"✓"}</div>
+                            <div className={`ex-chk ${mDone?"on":""}`} onClick={()=>{haptic(10);setMealsDone(p=>({...p,[i]:!p[i]}));}}>{mDone&&"✓"}</div>
                             <div>
                               <div className="meal-name" style={{textDecoration:mDone?"line-through":"none"}}>{m.name}</div>
                               <div className="meal-time">{m.time}</div>
@@ -1667,13 +1672,13 @@ export default function App() {
                     <div className="sleep-num" style={{color:sleepHrs>=7?G.lime:sleepHrs>=6?G.gold:G.accent}}>{sleepHrs}</div>
                     <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:"18px",color:G.muted}}>hours</div>
                   </div>
-                  <input className="sleep-slider" type="range" min="0" max="12" step="0.5" value={sleepHrs} onChange={e=>{setSleepHrs(parseFloat(e.target.value));setSleepLogged(false);}}/>
+                  <input className="sleep-slider" type="range" min="0" max="12" step="0.5" value={sleepHrs} onChange={e=>{setSleepHrs(parseFloat(e.target.value));}}/>
                   <div className="sleep-row">
                     <span className="sleep-lbl">0h</span>
                     <span className="sleep-lbl" style={{color:sleepHrs>=7?G.lime:G.muted}}>{sleepHrs>=7?"✓ TARGET MET":"Target: 7h+"}</span>
                     <span className="sleep-lbl">12h</span>
                   </div>
-                  <button onClick={()=>setSleepLogged(true)} style={{marginTop:12,width:"100%",background:sleepLogged?G.lime+"22":"white",color:sleepLogged?G.lime:"#000",border:`1px solid ${sleepLogged?G.lime:G.border}`,borderRadius:12,padding:"12px 0",fontFamily:G.mono,fontSize:11,fontWeight:600,letterSpacing:"0.1em",cursor:"pointer",transition:"all 0.2s"}}>
+                  <button onClick={()=>{haptic(12);setSleepLogged(true);}} style={{marginTop:12,width:"100%",background:sleepLogged?G.lime+"22":"white",color:sleepLogged?G.lime:"#000",border:`1px solid ${sleepLogged?G.lime:G.border}`,borderRadius:12,padding:"12px 0",fontFamily:G.mono,fontSize:11,fontWeight:600,letterSpacing:"0.1em",cursor:"pointer",transition:"all 0.2s"}}>
                     {sleepLogged?`✓ ${sleepHrs}h LOGGED`:"LOG SLEEP"}
                   </button>
                 </div>
@@ -1681,7 +1686,7 @@ export default function App() {
                 <div className="t-label sec-gap">NON-NEGOTIABLES</div>
                 {habits.map((h,i)=>(
                   <div key={i} className="ha-item">
-                    <div className={`ha-chk ${habitsDone[i]?"on":""}`} onClick={()=>setHabitsDone(p=>{const n=[...p];n[i]=!n[i];return n;})}>
+                    <div className={`ha-chk ${habitsDone[i]?"on":""}`} onClick={()=>{haptic(10);setHabitsDone(p=>{const n=[...p];n[i]=!n[i];return n;});}}>
                       {habitsDone[i]&&"✓"}
                     </div>
                     <div style={{fontSize:18,flexShrink:0}}>{h.icon}</div>
@@ -1822,7 +1827,7 @@ export default function App() {
           {screen!=="onboard"&&(
             <div className="bnav">
               {navItems.map(item=>(
-                <button key={item.id} className={`nb ${screen===item.id?"on":""}`} onClick={()=>setScreen(item.id)}>
+                <button key={item.id} className={`nb ${screen===item.id?"on":""}`} onClick={()=>{haptic();setScreen(item.id);}}>
                   {item.ic}{item.lbl}
                 </button>
               ))}
