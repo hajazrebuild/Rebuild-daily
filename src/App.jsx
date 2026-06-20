@@ -736,7 +736,16 @@ export default function App() {
       return saved ? JSON.parse(saved) : DEFAULT_HABITS;
     } catch { return DEFAULT_HABITS; }
   });
-  const [habitsDone, setHabitsDone] = useState(()=>{ try{ const saved=localStorage.getItem('rebuild_habits'); const h=saved?JSON.parse(saved):DEFAULT_HABITS; return Array(h.length).fill(false); }catch{ return Array(DEFAULT_HABITS.length).fill(false); } });
+  const [habitsDone, setHabitsDone] = useState(()=>{
+    try {
+      const today = (() => { const p=n=>String(n).padStart(2,'0'); const d=new Date(); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; })();
+      const saved = localStorage.getItem('rebuild_habitsDone_'+today);
+      if(saved) return JSON.parse(saved);
+      const h = localStorage.getItem('rebuild_habits');
+      const hab = h ? JSON.parse(h) : DEFAULT_HABITS;
+      return Array(hab.length).fill(false);
+    } catch { return Array(DEFAULT_HABITS.length).fill(false); }
+  });
   const [habitForm, setHabitForm] = useState({name:"",icon:"⭐",pts:"10"});
 
   // Sleep
@@ -794,6 +803,13 @@ export default function App() {
       localStorage.setItem('rebuild_food_'+today, JSON.stringify(foodEntries));
     } catch {}
   }, [foodEntries]);
+
+  useEffect(()=>{
+    try {
+      const today = localDateStr();
+      localStorage.setItem('rebuild_habitsDone_'+today, JSON.stringify(habitsDone));
+    } catch {}
+  }, [habitsDone]);
 
   // ── Supabase: sync profile data when key state changes ──────────
   useEffect(()=>{
@@ -926,7 +942,9 @@ export default function App() {
           setSleepHrs(data.sleep_hrs > 0 ? data.sleep_hrs : 0);
           setSleepLogged(data.sleep_hrs > 0);
           setCaloriesHit(!!data.calories_hit);
-          setHabitsDone(h => h.map((_,i) => i < (data.habits_done||0)));
+          // Habits: prefer localStorage (has exact booleans); Supabase only stores count
+          const savedHabits = (() => { try { const s=localStorage.getItem('rebuild_habitsDone_'+currentDate); return s?JSON.parse(s):null; } catch{return null;} })();
+          if(!savedHabits) setHabitsDone(h => h.map((_,i) => i < (data.habits_done||0)));
           setExDone(data.ex_done ? JSON.parse(data.ex_done) : {});
           setMealsDone(data.meals_done ? JSON.parse(data.meals_done) : {});
           if(data.custom_exercises) setCustomExercises(JSON.parse(data.custom_exercises));
