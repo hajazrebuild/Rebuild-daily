@@ -915,11 +915,13 @@ export default function App() {
           if(data.custom_exercises) setCustomExercises(JSON.parse(data.custom_exercises));
           if(data.w_plan) setWPlan(data.w_plan);
           if(data.tahajjud != null) setTahajjud(!!data.tahajjud);
+          if(data.quran_pages != null) setQuranPages(data.quran_pages);
         } else {
           // No log exists yet for this date — reset to a clean slate rather than
           // leaving whatever the previous day's state happened to be in memory.
           setPrayers([false,false,false,false,false]);
           setTahajjud(false);
+          setQuranPages(0);
           setSleepHrs(0);
           setSleepLogged(false);
           setCaloriesHit(false);
@@ -943,6 +945,7 @@ export default function App() {
           prayers_done: prayerCount,
           prayers_array: JSON.stringify(prayers),
           tahajjud: tahajjud,
+          quran_pages: quranPages,
           sleep_hrs: sleepLogged ? sleepHrs : 0,
           exercises_done: exDoneCount,
           exercises_total: currentExercises.length,
@@ -971,7 +974,7 @@ export default function App() {
         }
     }, 800);
     return () => clearTimeout(timer);
-  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises, currentDate]);
+  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises, currentDate, tahajjud, quranPages]);
 
   const challengeDay = completedDays.size;
   const earnedMilestones = MILESTONES.filter(m=>challengeDay>=m);
