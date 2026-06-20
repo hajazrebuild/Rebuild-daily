@@ -1031,6 +1031,7 @@ export default function App() {
     {id:"prayer",ic:Ic.faith,lbl:"FAITH"},
     {id:"nutrition",ic:Ic.fuel,lbl:"FUEL"},
     {id:"habits",ic:Ic.habits,lbl:"HABITS"},
+    {id:"community",ic:Ic.community,lbl:"CLUB"},
   ];
 
   return(
