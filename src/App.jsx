@@ -1039,7 +1039,12 @@ export default function App() {
       <div className="phone">
 
           {/* ONBOARD */}
-          {screen==="onboard"&&(
+          {screen==="onboard"&&!authReady&&(
+            <div style={{width:"100%",height:"100%",background:"#000",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <img src={LOGO_SRC} style={{width:48,height:48,objectFit:"contain",opacity:0.5}} alt="Rebuild"/>
+            </div>
+          )}
+          {screen==="onboard"&&authReady&&(
             <OnboardFlow onComplete={(name)=>{ try { localStorage.setItem("rebuild_username", name); } catch {} setUserName(name);setScreen("home");}} logo={LOGO_SRC} />
           )}
 
@@ -1269,7 +1274,7 @@ export default function App() {
               <div className="sec">
                 <div className="t-label sec-gap">ALL CHALLENGES</div>
 
-                <div className="ch-card" style={{"--cc":G.muted}} onClick={()=>{ if(activeChallenge) setConfirmChallengeSwitch(null); else null; }}>
+                <div className="ch-card" style={{"--cc":G.muted}} onClick={()=>{ if(activeChallenge) setConfirmChallengeSwitch("none"); }}>
                   <div style={{position:"absolute",left:0,top:0,bottom:0,width:3,background:G.muted,borderRadius:"18px 0 0 18px"}}/>
                   <div className="ch-name" style={{color:G.text}}>No Challenge</div>
                   <div className="ch-desc">Run the app freely without a challenge timer.</div>
@@ -1339,7 +1344,7 @@ export default function App() {
                     <div style={{textAlign:"center",padding:"24px 0",color:G.muted,fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:"15px",fontStyle:"italic"}}>No exercises yet for this day.</div>
                   ):(
                     <div className="custom-ex-list">
-                      <div className="t-label sec-gap">{(customExercises[dayIdx]||[]).length} EXERCISES</div>
+                      <div className="t-label sec-gap">{(customExercises[selectedDayIdx]||[]).length} EXERCISES</div>
                       {(customExercises[selectedDayIdx]||[]).map((ex,i)=>{
                         const k=`${selectedDayIdx}-custom-${i}`;
                         const done=!!exDone[k];
@@ -2291,20 +2296,20 @@ export default function App() {
                 <div style={{textAlign:"center",marginBottom:20}}>
                   <div style={{fontSize:36,marginBottom:12}}>⚡</div>
                   <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:17,fontWeight:700,color:G.text,marginBottom:8}}>
-                    {confirmChallengeSwitch ? `Switch to ${confirmChallengeSwitch.name}?` : "End your challenge?"}
+                    {confirmChallengeSwitch==="none" ? "End your challenge?" : `Switch to ${confirmChallengeSwitch?.name}?`}
                   </div>
                   <div style={{fontFamily:G.body,fontSize:13,color:G.muted,lineHeight:1.5}}>
                     {activeChallenge ? `Your current progress on ${activeChallenge.name} will be reset. This cannot be undone.` : ""}
                   </div>
                 </div>
                 <button onClick={()=>{
-                  const next = confirmChallengeSwitch;
+                  const next = confirmChallengeSwitch==="none" ? null : confirmChallengeSwitch;
                   setActiveChallenge(next);
                   try{localStorage.setItem('rebuild_challenge',JSON.stringify(next))}catch{}
                   setCompletedDays(new Set());
                   setConfirmChallengeSwitch(null);
-                }} style={{width:"100%",background:confirmChallengeSwitch?confirmChallengeSwitch.color:"#c0392b",color:"white",border:"none",borderRadius:12,padding:"14px",fontFamily:G.mono,fontSize:12,fontWeight:700,cursor:"pointer",letterSpacing:"0.08em",marginBottom:8}}>
-                  {confirmChallengeSwitch ? `YES, SWITCH TO ${confirmChallengeSwitch.name.toUpperCase()}` : "YES, END CHALLENGE"}
+                }} style={{width:"100%",background:confirmChallengeSwitch==="none"?"#c0392b":confirmChallengeSwitch?.color||G.accent,color:"white",border:"none",borderRadius:12,padding:"14px",fontFamily:G.mono,fontSize:12,fontWeight:700,cursor:"pointer",letterSpacing:"0.08em",marginBottom:8}}>
+                  {confirmChallengeSwitch==="none" ? "YES, END CHALLENGE" : `YES, SWITCH TO ${confirmChallengeSwitch?.name?.toUpperCase()}`}
                 </button>
                 <button onClick={()=>setConfirmChallengeSwitch(null)} className="btn-sec">Cancel</button>
               </div>
