@@ -616,6 +616,8 @@ export default function App() {
   const [userId, setUserId] = React.useState(null);
   const [modal, setModal] = useState(null); // "share"|"addEx"|"addHabit"|"customChallenge"|"addFood"|"setupMacros"|"profile"|"dayDetail"
   const [viewedDay, setViewedDay] = useState(null); // the logHistory row tapped on the home calendar strip
+  const [pastDay, setPastDay] = useState(null); // null = live today, or {date, data, loading} for past day view
+  const calendarRef = React.useRef(null);
 
   // Supabase auth session
   useEffect(()=>{
@@ -835,6 +837,13 @@ export default function App() {
         setStreak(count);
       });
   }, [userId, score]);
+  // Auto-scroll calendar to today whenever home screen mounts
+  useEffect(()=>{
+    if(screen==="home" && calendarRef.current) {
+      setTimeout(()=>{ if(calendarRef.current) calendarRef.current.scrollLeft = calendarRef.current.scrollWidth; }, 80);
+    }
+  }, [screen]);
+
   const [lbData, setLbData] = React.useState([]);
   useEffect(()=>{
     if(screen !== "community") return;
@@ -1074,134 +1083,274 @@ export default function App() {
                 )}
               </div>
 
-              {/* CALENDAR STRIP — last 14 real calendar dates, today highlighted by actual date match */}
-              <div className="day-row" style={{marginTop:4}}>
-                {Array.from({length:14}, (_,n)=>{
+              {/* CALENDAR STRIP — last 30 days, scrolls to today */}
+              <div className="day-row" ref={calendarRef} style={{marginTop:4}}>
+                {Array.from({length:30}, (_,n)=>{
                   const d = new Date();
-                  d.setDate(d.getDate() - (13 - n));
+                  d.setDate(d.getDate() - (29 - n));
                   const dateStr = d.toISOString().split("T")[0];
                   const isToday = dateStr === currentDate;
+                  const isSelected = pastDay?.date === dateStr;
                   const entry = logHistory.find(h => h.log_date === dateStr);
                   return (
-                    <button key={dateStr} className={`day-pill ${isToday?"on":""}`}
-                      style={isToday?{borderColor:G.accent,color:G.accent,background:G.accent+"12"}:{}}
-                      onClick={()=>{ if(isToday) return; setViewedDay({...(entry||{}), log_date: dateStr}); setModal("dayDetail"); }}>
-                      <div>{d.toLocaleDateString("en-GB",{weekday:"short"}).toUpperCase()}</div>
-                      <div style={{fontSize:11,fontWeight:700,marginTop:2,color: entry ? (isToday?G.accent:G.text) : G.border}}>
-                        {entry ? entry.score : "—"}
-                      </div>
+                    <button key={dateStr} className={`day-pill ${isToday&&!pastDay?"on":""}`}
+                      style={isToday&&!pastDay?{borderColor:G.accent,color:G.accent,background:G.accent+"12"}:isSelected?{borderColor:G.gold,color:G.text,background:G.gold+"12"}:{}}
+                      onClick={()=>{
+                        if(isToday){ setPastDay(null); return; }
+                        setPastDay({date:dateStr, data:null, loading:true});
+                        supabase.from("daily_logs").select("*").eq("user_id",userId).eq("log_date",dateStr).maybeSingle()
+                          .then(({data})=>setPastDay(prev=>prev?.date===dateStr?{date:dateStr,data:data||{log_date:dateStr,_noData:true},loading:false}:prev));
+                      }}>
+                      <div style={{fontFamily:G.mono,fontSize:9,color:isToday&&!pastDay?G.accent:isSelected?G.gold:G.muted,letterSpacing:"0.04em"}}>{d.toLocaleDateString("en-GB",{weekday:"short"}).toUpperCase()}</div>
+                      <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:17,fontWeight:600,color:isToday&&!pastDay?G.accent:isSelected?G.gold:entry?G.text:G.muted,lineHeight:1.1,marginTop:2}}>{d.getDate()}</div>
+                      <div style={{fontSize:7,marginTop:3,color:entry?G.accent:G.border}}>{entry?"●":"·"}</div>
                     </button>
                   );
                 })}
               </div>
 
-              <div className="quote-c">
-                <div className="quote-t">"{quote}"</div>
-                <div className="quote-a">REBUILD · KEEP IT.</div>
-              </div>
+              {/* PAST DAY VIEW or NORMAL HOME */}
+              {pastDay ? (
+                <div style={{flex:1,overflowY:"auto"}}>
+                  {/* Back to Today bar */}
+                  <button onClick={()=>setPastDay(null)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"10px 24px",background:G.gold+"18",border:"none",borderBottom:`1px solid ${G.gold}33`,cursor:"pointer",fontFamily:G.mono,fontSize:10,color:G.gold,letterSpacing:"0.1em",textAlign:"left"}}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+                    BACK TO TODAY
+                  </button>
 
-              <div className="score-wrap">
-                <div className="card card-accent">
-                  <div className="t-label" style={{marginBottom:8}}>DISCIPLINE SCORE</div>
-                  <div style={{position:"relative"}}>
-                    <div className="score-num" style={{color:G.accent}}>{score}</div>
-                    <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:"14px",color:G.muted,fontStyle:"italic",marginTop:2}}>
-                      {score>=80?"Exceptional.":score>=60?"Strong effort.":score>=40?"Keep pushing.":"Start now."}
+                  {pastDay.loading ? (
+                    <div style={{textAlign:"center",padding:"48px 0",color:G.muted,fontFamily:G.sans,fontSize:13}}>Loading...</div>
+                  ) : !pastDay.data?.score ? (
+                    <div style={{textAlign:"center",padding:"48px 24px"}}>
+                      <div style={{fontSize:36,marginBottom:12}}>📭</div>
+                      <div style={{fontFamily:G.sans,fontSize:15,color:G.muted}}>Nothing logged on this day.</div>
                     </div>
-                    <button className="share-pill" onClick={()=>setModal("share")}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-                      SHARE
-                    </button>
-                  </div>
-                  <div className="score-bar"><div className="score-fill" style={{width:`${score}%`}}/></div>
-                  <div className="score-breakdown">
-                    {[["Faith",G.accent,30],["Training",G.gold,30],["Habits",G.lime,25],["Nutrition",G.blue,12],["Sleep",G.purple,8]].map(([l,c,p])=>(
-                      <div key={l} className="score-part"><div className="score-dot" style={{background:c}}/>{l} {p}%</div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="sec">
-                <div className="t-label sec-gap">TODAY'S OVERVIEW</div>
-                <div className="stats-grid">
-                  {[
-                    {val:`${prayerCount}/5`,lbl:"PRAYERS",c:"#8a7a6a"},
-                    {val:`${exDoneCount}/${currentExercises.length||0}`,lbl:"EXERCISES",c:"#7a8a6a"},
-                    {val:`${habitsDoneCount}/${habits.length}`,lbl:"HABITS",c:"#6a7a8a"},
-                    {val:sleepLogged?`${sleepHrs}h`:"—",lbl:"SLEEP",c:"#7a6a8a"},
-                  ].map((s,i)=>(
-                    <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:16,padding:"16px 15px",borderTop:`1px solid ${s.c}55`}}>
-                      <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:20,fontWeight:600,letterSpacing:"-0.02em",color:G.text,lineHeight:1,marginBottom:6}}>{s.val}</div>
-                      <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,letterSpacing:"0.1em"}}>{s.lbl}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* CHALLENGE CARD */}
-              <div className="sec">
-                <div className="t-label sec-gap">ACTIVE CHALLENGE</div>
-                {activeChallenge ? (
-                  <div className="card" style={{cursor:"pointer"}} onClick={()=>setScreen("challenge")}>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                      <div>
-                        <div style={{fontFamily:G.sans,fontSize:15,fontWeight:700,color:activeChallenge.color}}>{activeChallenge.name}</div>
-                        <div style={{fontFamily:G.mono,fontSize:10,color:G.muted,marginTop:2}}>DAY {challengeDay} / {activeChallenge.days}</div>
+                  ) : (()=>{
+                    const d = pastDay.data;
+                    const jsDay = new Date(d.log_date+"T00:00:00").getDay();
+                    const logDayIdx = jsDay===0?6:jsDay-1;
+                    const pArr=(()=>{try{return JSON.parse(d.prayers_array||"[]")}catch{return []}})();
+                    const exDoneObj=(()=>{try{return JSON.parse(d.ex_done||"{}")}catch{return {}}})();
+                    const customExObj=(()=>{try{return JSON.parse(d.custom_exercises||"{}")}catch{return {}}})();
+                    const mealsDoneObj=(()=>{try{return JSON.parse(d.meals_done||"{}")}catch{return {}}})();
+                    const foodList=(()=>{try{return JSON.parse(d.food_entries||"[]")}catch{return []}})();
+                    const planDay=HAJAZ_PLAN[logDayIdx];
+                    const isHajazDay=d.w_plan==="hajaz";
+                    const exList=isHajazDay?(planDay?.exercises||[]):(customExObj[logDayIdx]||[]);
+                    const exPlanKey=isHajazDay?"hajaz":"custom";
+                    const prayerNames=["Fajr","Dhuhr","Asr","Maghrib","Isha"];
+                    const PRow=({label,value,color,border})=>(
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:border?`1px solid ${G.border}`:undefined}}>
+                        <div style={{fontFamily:G.sans,fontSize:13,color:G.text}}>{label}</div>
+                        <div style={{fontFamily:G.mono,fontSize:12,color:color||G.accent}}>{value}</div>
                       </div>
-                      <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:28,fontWeight:800,color:activeChallenge.color,lineHeight:1}}>{challengeDay}<span style={{fontSize:12,fontWeight:400,color:G.muted}}>d</span></div>
-                    </div>
-                    <div style={{height:4,background:G.border,borderRadius:2,overflow:"hidden",marginBottom:10}}>
-                      <div style={{height:"100%",width:`${Math.min(100,(challengeDay/activeChallenge.days)*100)}%`,background:activeChallenge.color,borderRadius:2,transition:"width 0.6s ease"}}/>
-                    </div>
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                      <div style={{fontFamily:G.mono,fontSize:9,color:G.muted}}>{Math.round((challengeDay/activeChallenge.days)*100)}% COMPLETE</div>
-                      <div style={{fontFamily:G.mono,fontSize:9,color:activeChallenge.color,letterSpacing:"0.08em"}}>VIEW FULL →</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="card" style={{cursor:"pointer",textAlign:"center",padding:"20px 24px"}} onClick={()=>setScreen("challenge")}>
-                    <div style={{fontSize:28,marginBottom:8}}>⚡</div>
-                    <div style={{fontFamily:G.sans,fontSize:14,fontWeight:600,color:G.text,marginBottom:4}}>No active challenge</div>
-                    <div style={{fontFamily:G.body,fontSize:12,color:G.muted,marginBottom:12}}>Pick a protocol and start building.</div>
-                    <div style={{fontFamily:G.mono,fontSize:10,color:G.accent,letterSpacing:"0.08em"}}>START A CHALLENGE →</div>
-                  </div>
-                )}
-              </div>
+                    );
+                    return (
+                      <div style={{padding:"20px 24px 100px"}}>
+                        <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:20,fontWeight:700,color:G.text,marginBottom:2}}>
+                          {new Date(d.log_date+"T00:00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}
+                        </div>
+                        <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,letterSpacing:"0.1em",marginBottom:18}}>READ ONLY · PAST DAY</div>
 
-              {/* CLUB CARD */}
-              <div className="sec" style={{marginBottom:0}}>
-                <div className="t-label sec-gap">REBUILD CLUB</div>
-                <div className="card" style={{cursor:"pointer"}} onClick={()=>setScreen("community")}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"10px 12px",background:G.s2,borderRadius:10,border:`1px solid ${G.accent}33`}}>
-                    <div style={{fontSize:20}}>{profile?.avatar||"💪"}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontFamily:G.sans,fontSize:13,fontWeight:600,color:G.text}}>{userName||"You"} <span style={{fontFamily:G.mono,fontSize:9,color:G.accent}}>· YOU</span></div>
-                      <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,marginTop:1}}>RANK #{lbData.find(r=>r&&r.username===userName)?.rank||"—"} THIS WEEK</div>
-                    </div>
-                    <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:22,fontWeight:800,color:G.accent}}>{score}</div>
-                  </div>
-                  <div style={{display:"flex",gap:6,marginBottom:12}}>
-                    {(lbData.length > 0 ? lbData.filter(r=>r).slice(0,3) : []).map((p,i)=>{
-                      const colors=[G.gold,G.purple,G.accent];
-                      const homeRankEmojis=["🏆","⚡","🔥"];
-                      return(
-                      <div key={i} style={{flex:1,background:G.s2,borderRadius:10,padding:"8px 6px",textAlign:"center",border:`1px solid ${colors[i]}33`}}>
-                        <div style={{fontSize:16,marginBottom:2}}>{homeRankEmojis[i]}</div>
-                        <div style={{fontFamily:G.sans,fontSize:10,fontWeight:600,color:G.text}}>{(p.username||"User").split(" ")[0]}</div>
-                        <div style={{fontFamily:G.mono,fontSize:10,color:colors[i],fontWeight:700}}>{p.score||0}</div>
-                        <div style={{fontFamily:G.mono,fontSize:8,color:G.muted}}>#{i+1}</div>
+                        {/* Score */}
+                        <div className="card card-accent" style={{marginBottom:16}}>
+                          <div className="t-label" style={{marginBottom:8}}>DISCIPLINE SCORE</div>
+                          <div className="score-num" style={{color:G.accent}}>{d.score}</div>
+                          <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:13,color:G.muted,fontStyle:"italic",marginTop:2,marginBottom:10}}>
+                            {d.score>=80?"Exceptional.":d.score>=60?"Strong effort.":d.score>=40?"Keep pushing.":"Start now."}
+                          </div>
+                          <div className="score-bar"><div className="score-fill" style={{width:`${d.score}%`}}/></div>
+                        </div>
+
+                        {/* Overview stats */}
+                        <div className="stats-grid" style={{marginBottom:20}}>
+                          {[
+                            {val:`${d.prayers_done||0}/5`,lbl:"PRAYERS",c:"#8a7a6a"},
+                            {val:`${d.exercises_done||0}/${d.exercises_total||0}`,lbl:"TRAINING",c:"#7a8a6a"},
+                            {val:`${d.habits_done||0}/${d.habits_total||0}`,lbl:"HABITS",c:"#6a7a8a"},
+                            {val:d.sleep_hrs?`${d.sleep_hrs}h`:"—",lbl:"SLEEP",c:"#7a6a8a"},
+                          ].map((s,i)=>(
+                            <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:16,padding:"16px 15px",borderTop:`1px solid ${s.c}55`}}>
+                              <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:20,fontWeight:600,letterSpacing:"-0.02em",color:G.text,lineHeight:1,marginBottom:6}}>{s.val}</div>
+                              <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,letterSpacing:"0.1em"}}>{s.lbl}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* FAITH */}
+                        <div className="t-label sec-gap" style={{marginBottom:8}}>FAITH</div>
+                        <div className="card" style={{marginBottom:16}}>
+                          {prayerNames.map((p,i)=><PRow key={p} label={p} value={pArr[i]?"✓ Done":"Missed"} color={pArr[i]?G.accent:G.muted} border={true}/>)}
+                          <PRow label="Tahajjud" value={d.tahajjud?"✓ Done":"—"} color={d.tahajjud?G.gold:G.muted} border={true}/>
+                          <PRow label="Quran pages" value={d.quran_pages>0?`${d.quran_pages} pages`:"—"} color={d.quran_pages>0?G.gold:G.muted} border={false}/>
+                        </div>
+
+                        {/* TRAINING */}
+                        <div className="t-label sec-gap" style={{marginBottom:8}}>TRAINING</div>
+                        <div className="card" style={{marginBottom:16}}>
+                          {planDay?.run ? (
+                            <PRow label="Cardio / Run" value={d.exercises_done>0?"✓ Done":"—"} color={d.exercises_done>0?G.lime:G.muted} border={false}/>
+                          ) : planDay?.ayah ? (
+                            <PRow label="Rest day" value="Recovery" color={G.muted} border={false}/>
+                          ) : exList.length>0 ? exList.map((ex,i)=>{
+                            const done=exDoneObj[`${logDayIdx}-${exPlanKey}-${i}`]||false;
+                            return (
+                              <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0",borderBottom:i<exList.length-1?`1px solid ${G.border}`:undefined}}>
+                                <div>
+                                  <div style={{fontFamily:G.sans,fontSize:13,color:done?G.text:G.muted}}>{ex.name}</div>
+                                  <div style={{fontFamily:G.mono,fontSize:10,color:G.muted,marginTop:2}}>{ex.sets} × {ex.reps}</div>
+                                </div>
+                                <div style={{fontFamily:G.mono,fontSize:13,color:done?G.accent:G.muted}}>{done?"✓":"—"}</div>
+                              </div>
+                            );
+                          }) : (
+                            <PRow label="Exercises" value={`${d.exercises_done||0}/${d.exercises_total||0} done`} color={G.accent} border={false}/>
+                          )}
+                        </div>
+
+                        {/* HABITS */}
+                        <div className="t-label sec-gap" style={{marginBottom:8}}>NON-NEGOTIABLES</div>
+                        <div className="card" style={{marginBottom:16}}>
+                          <PRow label="Completed" value={`${d.habits_done||0}/${d.habits_total||0}`} color={G.lime} border={false}/>
+                        </div>
+
+                        {/* FUEL */}
+                        <div className="t-label sec-gap" style={{marginBottom:8}}>FUEL</div>
+                        <div className="card" style={{marginBottom:16}}>
+                          <PRow label="Calorie target" value={d.calories_hit?"Hit ✓":"Missed"} color={d.calories_hit?G.accent:G.muted} border={true}/>
+                          {HAJAZ_MEALS.map((m,i)=>mealsDoneObj[i]?(
+                            <PRow key={i} label={m.name} value={`${m.kcal} kcal ✓`} color={G.accent} border={true}/>
+                          ):null)}
+                          {foodList.map((e,i)=>{
+                            const f=allFoods.find(x=>x.id===e.foodId);
+                            if(!f) return null;
+                            return <PRow key={i} label={f.name} value={`${e.grams}g · ${Math.round(f.kcal*e.grams/f.per)} kcal`} color={G.muted} border={i<foodList.length-1}/>;
+                          })}
+                          {Object.keys(mealsDoneObj).length===0&&foodList.length===0&&(
+                            <div style={{fontFamily:G.sans,fontSize:13,color:G.muted,padding:"8px 0"}}>Nothing logged</div>
+                          )}
+                        </div>
+
+                        {/* SLEEP */}
+                        <div className="t-label sec-gap" style={{marginBottom:8}}>SLEEP</div>
+                        <div className="card">
+                          <PRow label="Hours slept" value={d.sleep_hrs?`${d.sleep_hrs}h`:"—"} color={G.purple} border={false}/>
+                        </div>
                       </div>
-                    )})}
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                    <div style={{fontFamily:G.mono,fontSize:9,color:G.muted}}>10 MEMBERS RANKED</div>
-                    <div style={{fontFamily:G.mono,fontSize:9,color:G.accent,letterSpacing:"0.08em"}}>VIEW LEADERBOARD →</div>
-                  </div>
+                    );
+                  })()}
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="quote-c">
+                    <div className="quote-t">"{quote}"</div>
+                    <div className="quote-a">REBUILD · KEEP IT.</div>
+                  </div>
 
-              <div style={{height:100}}/>
+                  <div className="score-wrap">
+                    <div className="card card-accent">
+                      <div className="t-label" style={{marginBottom:8}}>DISCIPLINE SCORE</div>
+                      <div style={{position:"relative"}}>
+                        <div className="score-num" style={{color:G.accent}}>{score}</div>
+                        <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:"14px",color:G.muted,fontStyle:"italic",marginTop:2}}>
+                          {score>=80?"Exceptional.":score>=60?"Strong effort.":score>=40?"Keep pushing.":"Start now."}
+                        </div>
+                        <button className="share-pill" onClick={()=>setModal("share")}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                          SHARE
+                        </button>
+                      </div>
+                      <div className="score-bar"><div className="score-fill" style={{width:`${score}%`}}/></div>
+                      <div className="score-breakdown">
+                        {[["Faith",G.accent,30],["Training",G.gold,30],["Habits",G.lime,25],["Nutrition",G.blue,12],["Sleep",G.purple,8]].map(([l,c,p])=>(
+                          <div key={l} className="score-part"><div className="score-dot" style={{background:c}}/>{l} {p}%</div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sec">
+                    <div className="t-label sec-gap">TODAY'S OVERVIEW</div>
+                    <div className="stats-grid">
+                      {[
+                        {val:`${prayerCount}/5`,lbl:"PRAYERS",c:"#8a7a6a"},
+                        {val:`${exDoneCount}/${currentExercises.length||0}`,lbl:"EXERCISES",c:"#7a8a6a"},
+                        {val:`${habitsDoneCount}/${habits.length}`,lbl:"HABITS",c:"#6a7a8a"},
+                        {val:sleepLogged?`${sleepHrs}h`:"—",lbl:"SLEEP",c:"#7a6a8a"},
+                      ].map((s,i)=>(
+                        <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:16,padding:"16px 15px",borderTop:`1px solid ${s.c}55`}}>
+                          <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:20,fontWeight:600,letterSpacing:"-0.02em",color:G.text,lineHeight:1,marginBottom:6}}>{s.val}</div>
+                          <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,letterSpacing:"0.1em"}}>{s.lbl}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* CHALLENGE CARD */}
+                  <div className="sec">
+                    <div className="t-label sec-gap">ACTIVE CHALLENGE</div>
+                    {activeChallenge ? (
+                      <div className="card" style={{cursor:"pointer"}} onClick={()=>setScreen("challenge")}>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                          <div>
+                            <div style={{fontFamily:G.sans,fontSize:15,fontWeight:700,color:activeChallenge.color}}>{activeChallenge.name}</div>
+                            <div style={{fontFamily:G.mono,fontSize:10,color:G.muted,marginTop:2}}>DAY {challengeDay} / {activeChallenge.days}</div>
+                          </div>
+                          <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:28,fontWeight:800,color:activeChallenge.color,lineHeight:1}}>{challengeDay}<span style={{fontSize:12,fontWeight:400,color:G.muted}}>d</span></div>
+                        </div>
+                        <div style={{height:4,background:G.border,borderRadius:2,overflow:"hidden",marginBottom:10}}>
+                          <div style={{height:"100%",width:`${Math.min(100,(challengeDay/activeChallenge.days)*100)}%`,background:activeChallenge.color,borderRadius:2,transition:"width 0.6s ease"}}/>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                          <div style={{fontFamily:G.mono,fontSize:9,color:G.muted}}>{Math.round((challengeDay/activeChallenge.days)*100)}% COMPLETE</div>
+                          <div style={{fontFamily:G.mono,fontSize:9,color:activeChallenge.color,letterSpacing:"0.08em"}}>VIEW FULL →</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="card" style={{cursor:"pointer",textAlign:"center",padding:"20px 24px"}} onClick={()=>setScreen("challenge")}>
+                        <div style={{fontSize:28,marginBottom:8}}>⚡</div>
+                        <div style={{fontFamily:G.sans,fontSize:14,fontWeight:600,color:G.text,marginBottom:4}}>No active challenge</div>
+                        <div style={{fontFamily:G.body,fontSize:12,color:G.muted,marginBottom:12}}>Pick a protocol and start building.</div>
+                        <div style={{fontFamily:G.mono,fontSize:10,color:G.accent,letterSpacing:"0.08em"}}>START A CHALLENGE →</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CLUB CARD */}
+                  <div className="sec" style={{marginBottom:0}}>
+                    <div className="t-label sec-gap">REBUILD CLUB</div>
+                    <div className="card" style={{cursor:"pointer"}} onClick={()=>setScreen("community")}>
+                      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"10px 12px",background:G.s2,borderRadius:10,border:`1px solid ${G.accent}33`}}>
+                        <div style={{fontSize:20}}>{profile?.avatar||"💪"}</div>
+                        <div style={{flex:1}}>
+                          <div style={{fontFamily:G.sans,fontSize:13,fontWeight:600,color:G.text}}>{userName||"You"} <span style={{fontFamily:G.mono,fontSize:9,color:G.accent}}>· YOU</span></div>
+                          <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,marginTop:1}}>RANK #{lbData.find(r=>r&&r.username===userName)?.rank||"—"} THIS WEEK</div>
+                        </div>
+                        <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:22,fontWeight:800,color:G.accent}}>{score}</div>
+                      </div>
+                      <div style={{display:"flex",gap:6,marginBottom:12}}>
+                        {(lbData.length > 0 ? lbData.filter(r=>r).slice(0,3) : []).map((p,i)=>{
+                          const colors=[G.gold,G.purple,G.accent];
+                          const homeRankEmojis=["🏆","⚡","🔥"];
+                          return(
+                          <div key={i} style={{flex:1,background:G.s2,borderRadius:10,padding:"8px 6px",textAlign:"center",border:`1px solid ${colors[i]}33`}}>
+                            <div style={{fontSize:16,marginBottom:2}}>{homeRankEmojis[i]}</div>
+                            <div style={{fontFamily:G.sans,fontSize:10,fontWeight:600,color:G.text}}>{(p.username||"User").split(" ")[0]}</div>
+                            <div style={{fontFamily:G.mono,fontSize:10,color:colors[i],fontWeight:700}}>{p.score||0}</div>
+                            <div style={{fontFamily:G.mono,fontSize:8,color:G.muted}}>#{i+1}</div>
+                          </div>
+                        )})}
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                        <div style={{fontFamily:G.mono,fontSize:9,color:G.muted}}>10 MEMBERS RANKED</div>
+                        <div style={{fontFamily:G.mono,fontSize:9,color:G.accent,letterSpacing:"0.08em"}}>VIEW LEADERBOARD →</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{height:100}}/>
+                </>
+              )}
             </div>
           )}
 
@@ -1870,34 +2019,102 @@ export default function App() {
           {/* SHARE */}
           {modal==="dayDetail"&&viewedDay&&(
             <div className="overlay" onClick={()=>setModal(null)}>
-              <div className="sheet" onClick={e=>e.stopPropagation()}>
+              <div className="sheet" onClick={e=>e.stopPropagation()} style={{maxHeight:"88vh",overflowY:"auto",paddingBottom:32}}>
                 <div className="sheet-handle"/>
                 <div className="sheet-title">{new Date(viewedDay.log_date+"T00:00:00").toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
-                <div className="sheet-sub">{viewedDay.score != null ? "Day summary" : "No activity logged this day"}</div>
-                {viewedDay.score != null ? (
-                  <>
-                    <div className="card card-accent" style={{marginBottom:16}}>
-                      <div className="t-label" style={{marginBottom:8}}>DISCIPLINE SCORE</div>
-                      <div className="score-num" style={{color:G.accent}}>{viewedDay.score}</div>
+                {viewedDay._loading ? (
+                  <div style={{textAlign:"center",padding:"32px 0",color:G.muted,fontFamily:G.sans,fontSize:13}}>Loading...</div>
+                ) : viewedDay._noData || viewedDay.score == null ? (
+                  <div style={{textAlign:"center",padding:"32px 0",color:G.muted,fontFamily:G.sans,fontSize:13}}>Nothing was logged on this day.</div>
+                ) : (()=>{
+                  const jsDay = new Date(viewedDay.log_date+"T00:00:00").getDay();
+                  const logDayIdx = jsDay === 0 ? 6 : jsDay - 1;
+                  const pArr = (()=>{try{return JSON.parse(viewedDay.prayers_array||"[]")}catch{return []}})();
+                  const exDoneObj = (()=>{try{return JSON.parse(viewedDay.ex_done||"{}")}catch{return {}}})();
+                  const customExObj = (()=>{try{return JSON.parse(viewedDay.custom_exercises||"{}")}catch{return {}}})();
+                  const mealsDoneObj = (()=>{try{return JSON.parse(viewedDay.meals_done||"{}")}catch{return {}}})();
+                  const foodList = (()=>{try{return JSON.parse(viewedDay.food_entries||"[]")}catch{return []}})();
+                  const planDay = HAJAZ_PLAN[logDayIdx];
+                  const isHajaz = viewedDay.w_plan === "hajaz";
+                  const exList = isHajaz ? (planDay?.exercises||[]) : (customExObj[logDayIdx]||[]);
+                  const exPlanKey = isHajaz ? "hajaz" : "custom";
+                  const prayerNames = ["Fajr","Dhuhr","Asr","Maghrib","Isha"];
+                  const Row = ({label, value, color, border})=>(
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:border?`1px solid ${G.border}`:undefined}}>
+                      <div style={{fontFamily:G.sans,fontSize:13,color:G.text}}>{label}</div>
+                      <div style={{fontFamily:G.mono,fontSize:13,color:color||G.accent}}>{value}</div>
                     </div>
-                    <div className="stats-grid">
-                      {[
-                        {l:"PRAYERS",v:`${viewedDay.prayers_done||0}/5`,c:"#8a7a6a"},
-                        {l:"EXERCISES",v:`${viewedDay.exercises_done||0}/${viewedDay.exercises_total||0}`,c:"#7a8a6a"},
-                        {l:"HABITS",v:`${viewedDay.habits_done||0}/${viewedDay.habits_total||0}`,c:"#6a7a8a"},
-                        {l:"SLEEP",v: viewedDay.sleep_hrs ? `${viewedDay.sleep_hrs}h` : "—", c:"#7a6a8a"},
-                        {l:"NUTRITION",v: viewedDay.calories_hit ? "Hit ✓" : "Missed", c:"#8a6a7a"},
-                      ].map((s,i)=>(
-                        <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:16,padding:"16px 15px",borderTop:`1px solid ${s.c}55`}}>
-                          <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:20,fontWeight:600,letterSpacing:"-0.02em",color:G.text,lineHeight:1,marginBottom:6}}>{s.v}</div>
-                          <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,letterSpacing:"0.1em"}}>{s.l}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <div className="card-sm" style={{color:G.muted,fontSize:13}}>Nothing was logged on this day.</div>
-                )}
+                  );
+                  return (
+                    <>
+                      {/* Score */}
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",background:G.surface,border:`1px solid ${G.accent}33`,borderRadius:14,padding:"14px 16px",marginBottom:18}}>
+                        <div style={{fontFamily:G.sans,fontSize:11,letterSpacing:"0.15em",color:G.muted}}>DISCIPLINE SCORE</div>
+                        <div style={{fontFamily:"-apple-system,'SF Pro Display',sans-serif",fontSize:28,fontWeight:800,color:G.accent,letterSpacing:"-0.03em"}}>{viewedDay.score}</div>
+                      </div>
+
+                      {/* Faith */}
+                      <div className="t-label sec-gap" style={{marginBottom:8}}>FAITH</div>
+                      <div className="card" style={{marginBottom:14}}>
+                        {prayerNames.map((p,i)=>{
+                          const done = pArr[i]||false;
+                          return <Row key={p} label={p} value={done?"✓ Done":"Missed"} color={done?G.accent:G.muted} border={i<4}/>;
+                        })}
+                        <Row label="Tahajjud" value={viewedDay.tahajjud?"✓ Done":"—"} color={viewedDay.tahajjud?G.gold:G.muted} border={true}/>
+                        <Row label="Quran pages" value={viewedDay.quran_pages>0?`${viewedDay.quran_pages} pages`:"—"} color={viewedDay.quran_pages>0?G.gold:G.muted} border={false}/>
+                      </div>
+
+                      {/* Training */}
+                      <div className="t-label sec-gap" style={{marginBottom:8}}>TRAINING</div>
+                      <div className="card" style={{marginBottom:14}}>
+                        {planDay?.run ? (
+                          <Row label="Cardio / Run" value={viewedDay.exercises_done>0?"✓ Done":"—"} color={viewedDay.exercises_done>0?G.lime:G.muted} border={false}/>
+                        ) : planDay?.ayah ? (
+                          <Row label="Rest day" value="Recovery" color={G.muted} border={false}/>
+                        ) : exList.length > 0 ? exList.map((ex,i)=>{
+                          const done = exDoneObj[`${logDayIdx}-${exPlanKey}-${i}`]||false;
+                          return (
+                            <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:i<exList.length-1?`1px solid ${G.border}`:undefined}}>
+                              <div>
+                                <div style={{fontFamily:G.sans,fontSize:13,color:done?G.text:G.muted}}>{ex.name}</div>
+                                <div style={{fontFamily:G.mono,fontSize:10,color:G.muted,marginTop:2}}>{ex.sets} × {ex.reps}</div>
+                              </div>
+                              <div style={{fontFamily:G.mono,fontSize:13,color:done?G.accent:G.muted}}>{done?"✓":"—"}</div>
+                            </div>
+                          );
+                        }) : (
+                          <Row label="Exercises" value={`${viewedDay.exercises_done||0}/${viewedDay.exercises_total||0} done`} color={G.accent} border={false}/>
+                        )}
+                      </div>
+
+                      {/* Habits */}
+                      <div className="t-label sec-gap" style={{marginBottom:8}}>NON-NEGOTIABLES</div>
+                      <div className="card" style={{marginBottom:14}}>
+                        <Row label="Completed" value={`${viewedDay.habits_done||0}/${viewedDay.habits_total||0}`} color={G.accent} border={false}/>
+                      </div>
+
+                      {/* Nutrition */}
+                      <div className="t-label sec-gap" style={{marginBottom:8}}>NUTRITION</div>
+                      <div className="card" style={{marginBottom:14}}>
+                        <Row label="Calorie target" value={viewedDay.calories_hit?"Hit ✓":"Missed"} color={viewedDay.calories_hit?G.accent:G.muted} border={foodList.length>0||Object.keys(mealsDoneObj).length>0}/>
+                        {Object.keys(mealsDoneObj).length>0 && HAJAZ_MEALS.map((m,i)=>(
+                          mealsDoneObj[i] ? <Row key={i} label={m.name} value={`${m.kcal} kcal ✓`} color={G.accent} border={i<HAJAZ_MEALS.length-1||foodList.length>0}/> : null
+                        ))}
+                        {foodList.map((e,i)=>{
+                          const f=allFoods.find(x=>x.id===e.foodId);
+                          if(!f) return null;
+                          return <Row key={i} label={f.name} value={`${e.grams}g · ${Math.round(f.kcal*e.grams/f.per)} kcal`} color={G.muted} border={i<foodList.length-1}/>;
+                        })}
+                      </div>
+
+                      {/* Sleep */}
+                      <div className="t-label sec-gap" style={{marginBottom:8}}>SLEEP</div>
+                      <div className="card" style={{marginBottom:8}}>
+                        <Row label="Hours slept" value={viewedDay.sleep_hrs?`${viewedDay.sleep_hrs}h`:"—"} color={G.purple} border={false}/>
+                      </div>
+                    </>
+                  );
+                })()}
                 <button className="btn-sec" style={{marginTop:16}} onClick={()=>setModal(null)}>Close</button>
               </div>
             </div>
