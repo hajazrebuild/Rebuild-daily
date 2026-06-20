@@ -1656,8 +1656,15 @@ export default function App() {
                   <div className="hm-grid">
                     {[0,1,2,3,4,5,6].map((i)=>{
                       const todayIdx = (()=>{ const d=new Date().getDay(); return d===0?6:d-1; })();
-                      const v = i < todayIdx ? true : i === todayIdx ? "t" : false;
-                      return <div key={i} className={`hm-cell ${v===true?"g":v==="t"?"t":""}`}/>;
+                      // Get the actual date for this weekday (Mon=0 ... Sun=6)
+                      const diff = i - todayIdx;
+                      const d = new Date();
+                      d.setDate(d.getDate() + diff);
+                      const dateStr = d.toISOString().split("T")[0];
+                      const logged = logHistory.find(h => h.log_date === dateStr && h.score > 0);
+                      const isToday = i === todayIdx;
+                      const isFuture = i > todayIdx;
+                      return <div key={i} className={`hm-cell ${logged?"g":isToday?"t":""}`} style={isFuture?{opacity:0.2}:{}}/>;
                     })}
                   </div>
                 </div>
