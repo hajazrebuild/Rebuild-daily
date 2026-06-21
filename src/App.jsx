@@ -968,9 +968,13 @@ export default function App() {
           setSleepHrs(data.sleep_hrs > 0 ? data.sleep_hrs : 0);
           setSleepLogged(data.sleep_hrs > 0);
           setCaloriesHit(!!data.calories_hit);
-          // Habits: prefer localStorage (has exact booleans); Supabase only stores count
-          const savedHabits = (() => { try { const s=localStorage.getItem('rebuild_habitsDone_'+currentDate); return s?JSON.parse(s):null; } catch{return null;} })();
-          if(!savedHabits) setHabitsDone(h => h.map((_,i) => i < (data.habits_done||0)));
+          // Habits: prefer habits_array (exact booleans) from Supabase, then localStorage, then count fallback
+          if(data.habits_array) {
+            try { setHabitsDone(JSON.parse(data.habits_array)); } catch {}
+          } else {
+            const savedHabits = (() => { try { const s=localStorage.getItem('rebuild_habitsDone_'+currentDate); return s?JSON.parse(s):null; } catch{return null;} })();
+            if(!savedHabits) setHabitsDone(h => h.map((_,i) => i < (data.habits_done||0)));
+          }
           setExDone(data.ex_done ? JSON.parse(data.ex_done) : {});
           setMealsDone(data.meals_done ? JSON.parse(data.meals_done) : {});
           if(data.custom_exercises) setCustomExercises(JSON.parse(data.custom_exercises));
@@ -1016,6 +1020,7 @@ export default function App() {
           exercises_done: exDoneCount,
           exercises_total: exTotalForScore,
           habits_done: habitsDoneCount,
+          habits_array: JSON.stringify(habitsDone),
           habits_total: habits.length,
           calories_hit: caloriesHit,
           score,
@@ -1041,7 +1046,7 @@ export default function App() {
         }
     }, 800);
     return () => clearTimeout(timer);
-  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises, currentDate, tahajjud, quranPages, foodEntries]);
+  }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDone, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises, currentDate, tahajjud, quranPages, foodEntries]);
 
   const SCORE_THRESHOLD = 60;
   // Auto-derive completed days from logHistory — a day counts if score >= 60 and within challenge period
