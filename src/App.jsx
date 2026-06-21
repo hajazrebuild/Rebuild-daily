@@ -720,7 +720,7 @@ export default function App() {
   const [runDone, setRunDone] = useState(false);
 
   // Nutrition
-  const [nPlan, setNPlan] = useState("hajaz");
+  const [nPlan, setNPlan] = useState(()=>{ try{return localStorage.getItem('rebuild_nplan')||'hajaz'}catch{return 'hajaz'} });
   // Hajaz plan macros — fixed, never changes
   const HAJAZ_MACROS = {kcal:2300,protein:160,carbs:215,fat:88};
 
@@ -1798,8 +1798,8 @@ export default function App() {
 
               <div className="sec">
                 <div className="toggle-row" style={{marginBottom:14}}>
-                  <button className={`tgl ${nPlan==="hajaz"?"on":""}`} onClick={()=>setNPlan("hajaz")}>HAJAZ'S PLAN</button>
-                  <button className={`tgl ${nPlan==="custom"?"on":""}`} onClick={()=>setNPlan("custom")}>MY OWN PLAN</button>
+                  <button className={`tgl ${nPlan==="hajaz"?"on":""}`} onClick={()=>{setNPlan("hajaz");try{localStorage.setItem('rebuild_nplan','hajaz')}catch{}}}>HAJAZ'S PLAN</button>
+                  <button className={`tgl ${nPlan==="custom"?"on":""}`} onClick={()=>{setNPlan("custom");try{localStorage.setItem('rebuild_nplan','custom')}catch{}}}>MY OWN PLAN</button>
                 </div>
 
                 {nPlan==="custom"?(
