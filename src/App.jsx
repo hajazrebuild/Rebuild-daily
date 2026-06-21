@@ -1125,12 +1125,13 @@ export default function App() {
   ];
 
   const WT_STEPS = [
-    { screen:"home",     icon:"🏠", title:"Home",        body:"Your daily discipline score lives here — 0 to 100. It updates in real time as you log the day. Tap any date on the calendar strip to review a past day." },
-    { screen:"workout",  icon:"🏋️", title:"Train",       body:"Your weekly workout plan. Check off each exercise as you complete it. On run days, tap 'Mark Run Complete'. Exercises reset every Monday." },
-    { screen:"prayer",   icon:"🕌", title:"Faith",       body:"Log your 5 daily prayers, Quran pages, and Tahajjud here. Faith makes up 30 points of your score — the biggest category." },
-    { screen:"nutrition",icon:"🥗", title:"Fuel",        body:"Track your meals. You earn 12 points when you hit 90% of your calorie target. Use Hajaz's plan or set your own macro targets." },
-    { screen:"habits",   icon:"✅", title:"Habits",      body:"Your daily habits checklist. Each habit you complete adds to your score. You can add, edit, or remove habits in settings." },
-    { screen:"community",icon:"🤝", title:"Club",        body:"See where you rank against other members. The leaderboard updates daily based on everyone's score." },
+    { screen:"home",     icon:Ic.home,      title:"Home",        body:"Your daily discipline score lives here — 0 to 100. It updates in real time as you log the day. Tap any date on the calendar strip to review a past day." },
+    { screen:"workout",  icon:Ic.train,     title:"Train",       body:"Your weekly workout plan. Check off each exercise as you complete it. On run days, tap 'Mark Run Complete'. Exercises reset every Monday." },
+    { screen:"prayer",   icon:Ic.faith,     title:"Faith",       body:"Log your 5 daily prayers, Quran pages, and Tahajjud here. Faith makes up 30 points of your score — the biggest category." },
+    { screen:"nutrition",icon:Ic.fuel,      title:"Fuel",        body:"Track your meals. You earn 12 points when you hit 90% of your calorie target. Use Hajaz's plan or set your own macro targets." },
+    { screen:"habits",   icon:Ic.habits,    title:"Habits",      body:"Your daily habits checklist. Each habit you complete adds to your score. You can add, edit, or remove habits in settings." },
+    { screen:"community",icon:Ic.community, title:"Club",        body:"See where you rank against other members. The leaderboard updates daily based on everyone's score." },
+    { screen:"home",     icon:Ic.zap,       title:"Challenges",  body:"Start a 30-day or 75-day challenge from your home screen. A day counts as complete when your score hits 60 or above. Track your streak and milestones here." },
   ];
 
   function finishWalkthrough() {
@@ -2158,7 +2159,7 @@ export default function App() {
                   </div>
                   {/* Icon + title */}
                   <div style={{textAlign:"center",marginBottom:14}}>
-                    <div style={{fontSize:36,marginBottom:8}}>{step.icon}</div>
+                    <div style={{width:32,height:32,margin:"0 auto 10px",color:G.accent}}>{step.icon}</div>
                     <div style={{fontFamily:G.mono,fontSize:11,letterSpacing:"0.12em",color:G.accent,marginBottom:4}}>{step.title.toUpperCase()}</div>
                   </div>
                   {/* Body */}
