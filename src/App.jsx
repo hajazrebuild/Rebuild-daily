@@ -895,6 +895,7 @@ export default function App() {
   const [lbData, setLbData] = React.useState([]);
   useEffect(()=>{
     if(screen !== "community" && screen !== "home") return;
+    if(lbData.length > 0 && screen !== "community") return; // skip refetch on home if already loaded
     supabase.from("leaderboard").select("*").limit(10)
       .then(({ data })=>{ if(data && data.length > 0) setLbData(data); });
   }, [screen]);
@@ -2069,7 +2070,7 @@ export default function App() {
                   <div style={{marginTop:8,marginBottom:8}}>
                     <div style={{height:1,background:G.border,marginBottom:8}}/>
                     <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderRadius:12,background:`${G.accent}11`,border:`1px solid ${G.accent}33`}}>
-                      <div style={{fontFamily:G.mono,fontSize:11,color:G.accent,width:18,textAlign:"center"}}>#{userRank.rank}</div>
+                      <div style={{fontFamily:G.mono,fontSize:11,color:G.accent,minWidth:28,textAlign:"center"}}>#{userRank.rank}</div>
                       <div style={{fontSize:18,flexShrink:0}}>{userRank.avatar}</div>
                       <div style={{flex:1}}>
                         <div style={{fontFamily:G.sans,fontSize:13,fontWeight:600,color:G.text}}>{userRank.name} <span style={{fontFamily:G.mono,fontSize:9,color:G.accent,letterSpacing:"0.08em"}}>· YOU</span></div>
