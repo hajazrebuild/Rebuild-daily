@@ -1033,7 +1033,12 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises, currentDate, tahajjud, quranPages, foodEntries]);
 
-  const challengeDay = completedDays.size;
+  const SCORE_THRESHOLD = 60;
+  // Auto-derive completed days from logHistory — a day counts if score >= 60 and within challenge period
+  const challengeDay = useMemo(()=>{
+    if(!activeChallenge?.startDate) return completedDays.size; // backward compat for old challenges without startDate
+    return logHistory.filter(h => h.log_date >= activeChallenge.startDate && (h.score||0) >= SCORE_THRESHOLD).length;
+  }, [logHistory, activeChallenge, completedDays]);
   const earnedMilestones = MILESTONES.filter(m=>challengeDay>=m);
 
   const filteredFoods = allFoods.filter(f=>f.name.toLowerCase().includes(foodSearch.toLowerCase()));
@@ -1432,31 +1437,45 @@ export default function App() {
                       <span style={{fontFamily:G.mono,fontSize:"9px",color:G.muted}}>{(activeChallenge.days||30)-challengeDay} remaining</span>
                     </div>
 
-                    {/* Day grid */}
+                    {/* Day grid — auto scored */}
                     <div style={{marginTop:16}}>
-                      <div style={{fontFamily:G.sans,fontSize:"9px",letterSpacing:"0.15em",color:G.muted,marginBottom:10}}>DAYS — TAP NEXT TO COMPLETE</div>
-                      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:5}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                        <div style={{fontFamily:G.mono,fontSize:"9px",letterSpacing:"0.12em",color:G.muted}}>DAILY GRID · 60+ = COMPLETE</div>
+                        <div style={{fontFamily:G.mono,fontSize:"9px",color:activeChallenge.color}}>{challengeDay} / {activeChallenge.days} DAYS</div>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}}>
                         {Array.from({length:activeChallenge.days||30},(_,i)=>{
-                          const dayNum = i+1;
-                          const done = completedDays.has(dayNum);
-                          const isNext = dayNum === challengeDay+1;
-                          const locked = !done && !isNext;
+                          const startD = new Date((activeChallenge.startDate||currentDate)+"T00:00:00");
+                          startD.setDate(startD.getDate()+i);
+                          const dateStr = localDateStr(startD);
+                          const isToday = dateStr === currentDate;
+                          const isFuture = dateStr > currentDate;
+                          const log = logHistory.find(h=>h.log_date===dateStr);
+                          const dayScore = isToday ? score : (log?.score||0);
+                          const done = !isFuture && dayScore >= SCORE_THRESHOLD;
+                          const failed = !isFuture && !isToday && !done;
                           return (
-                            <div key={dayNum}
-                              onClick={()=>{ if(isNext) setCompletedDays(p=>{ const n=new Set([...p,dayNum]); try{localStorage.setItem('rebuild_completed_days',JSON.stringify([...n]))}catch{}; return n; }); }}
-                              style={{
-                                aspectRatio:"1",borderRadius:6,display:"flex",alignItems:"center",justifyContent:"center",
-                                fontSize:"9px",fontFamily:G.mono,cursor:isNext?"pointer":"default",
-                                background: done ? activeChallenge.color : isNext ? activeChallenge.color+"22" : G.border,
-                                color: done ? "#fff" : isNext ? activeChallenge.color : G.muted,
-                                border: isNext ? `1.5px solid ${activeChallenge.color}` : "none",
-                                opacity: locked ? 0.4 : 1,
-                                transition:"all 0.2s",
-                              }}>
-                              {done ? "✓" : dayNum}
+                            <div key={i} style={{
+                              aspectRatio:"1",borderRadius:6,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+                              fontSize:"8px",fontFamily:G.mono,cursor:"default",
+                              background: done ? activeChallenge.color : failed ? "#c0392b22" : isToday ? activeChallenge.color+"22" : G.border,
+                              color: done ? "#fff" : failed ? "#c0392b" : isToday ? activeChallenge.color : G.muted,
+                              border: isToday ? `1.5px solid ${activeChallenge.color}` : failed ? "1px solid #c0392b44" : "none",
+                              gap:1,
+                            }}>
+                              <div style={{fontSize:"7px",opacity:0.7}}>{i+1}</div>
+                              <div style={{fontSize:"9px",fontWeight:700}}>{done?"✓":failed?"✕":isToday?dayScore:"·"}</div>
                             </div>
                           );
                         })}
+                      </div>
+                      <div style={{display:"flex",gap:12,marginTop:10}}>
+                        {[{c:activeChallenge.color,l:"Complete (60+)"},{c:"#c0392b",l:"Failed (<60)"},{c:G.muted,l:"Upcoming"}].map(({c,l})=>(
+                          <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontFamily:G.mono,fontSize:"8px",color:G.muted}}>
+                            <div style={{width:8,height:8,borderRadius:2,background:c}}/>
+                            {l}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -1488,7 +1507,7 @@ export default function App() {
 
                 {CHALLENGES.map(ch=>(
                   <div key={ch.id} className={`ch-card ${activeChallenge?.id===ch.id?"on":""}`} style={{"--cc":ch.color}}
-                    onClick={()=>{ if(ch.id==="custom"){setModal("customChallenge");}else if(activeChallenge&&activeChallenge.id!==ch.id){setConfirmChallengeSwitch(ch);}else if(!activeChallenge){setActiveChallenge(ch);try{localStorage.setItem('rebuild_challenge',JSON.stringify(ch))}catch{};setCompletedDays(new Set());} }}>
+                    onClick={()=>{ if(ch.id==="custom"){setModal("customChallenge");}else if(activeChallenge&&activeChallenge.id!==ch.id){setConfirmChallengeSwitch(ch);}else if(!activeChallenge){const c={...ch,startDate:localDateStr()};setActiveChallenge(c);try{localStorage.setItem('rebuild_challenge',JSON.stringify(c))}catch{};setCompletedDays(new Set());} }}>
                     <div className="ch-name" style={{color:ch.color}}>{ch.name}</div>
                     <div className="ch-desc">{ch.desc}</div>
                     <div className="ch-days-lbl" style={{color:ch.color}}>📅 {ch.days||"?"} DAYS</div>
@@ -2240,7 +2259,7 @@ export default function App() {
                 <input className="inp" placeholder="Your goal (e.g. Hit the gym every day)" value={customChallengeForm.goal} onChange={e=>setCustomChallengeForm(p=>({...p,goal:e.target.value}))}/>
                 <button className="btn-p" onClick={()=>{
                   if(!customChallengeForm.name||!customChallengeForm.days) return;
-                  const cv={id:"custom_"+Date.now(),name:customChallengeForm.name,days:parseInt(customChallengeForm.days),color:G.purple,desc:customChallengeForm.goal}; setActiveChallenge(cv); try{localStorage.setItem('rebuild_challenge',JSON.stringify(cv))}catch{};
+                  const cv={id:"custom_"+Date.now(),name:customChallengeForm.name,days:parseInt(customChallengeForm.days),color:G.purple,desc:customChallengeForm.goal,startDate:localDateStr()}; setActiveChallenge(cv); try{localStorage.setItem('rebuild_challenge',JSON.stringify(cv))}catch{};
                   setCompletedDays(new Set());
                   setCustomChallengeForm({name:"",days:"",goal:""});
                   setModal(null);
@@ -2579,7 +2598,8 @@ export default function App() {
                   </div>
                 </div>
                 <button onClick={()=>{
-                  const next = confirmChallengeSwitch==="none" ? null : confirmChallengeSwitch;
+                  const raw = confirmChallengeSwitch==="none" ? null : confirmChallengeSwitch;
+                  const next = raw ? {...raw, startDate: localDateStr()} : null;
                   setActiveChallenge(next);
                   try{localStorage.setItem('rebuild_challenge',JSON.stringify(next))}catch{}
                   setCompletedDays(new Set());
