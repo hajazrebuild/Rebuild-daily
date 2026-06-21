@@ -682,6 +682,8 @@ export default function App() {
 
   // Refresh key: increment to force a re-fetch from Supabase (cross-device sync)
   const [logRefreshKey, setLogRefreshKey] = React.useState(0);
+  const saveTimerRef = React.useRef(null); // track pending save so load can cancel it
+  const isLoadingRef = React.useRef(false); // true while a Supabase load is in flight
 
   // Auto-update day when app comes back into focus (e.g. next day or cross-device sync)
   useEffect(()=>{
@@ -972,6 +974,9 @@ export default function App() {
     if(lastLoadedDateRef.current === currentDate) return;
     lastLoadedDateRef.current = currentDate;
     async function loadDailyLog() {
+      // Cancel any pending save — prevents stale local data overwriting fresher Supabase data
+      if(saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; }
+      isLoadingRef.current = true;
       try {
         const { data } = await supabase.from("daily_logs").select("*").eq("user_id", userId).eq("log_date", currentDate).maybeSingle();
 
@@ -1013,6 +1018,7 @@ export default function App() {
           setFoodEntries([]);
         }
       } catch(e) { console.error("DB load error:", e); }
+      isLoadingRef.current = false;
       setDbLoaded(true);
     }
     loadDailyLog();
@@ -1021,7 +1027,10 @@ export default function App() {
   // ── Supabase: save daily log (debounced 800ms, only after initial load) ──
   useEffect(()=>{
     if(!dbLoaded || !userId) return;
-    const timer = setTimeout(()=>{
+    if(saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(()=>{
+      saveTimerRef.current = null;
+      if(isLoadingRef.current) return; // abort if a load is still in flight
       supabase.from("daily_logs").upsert({
           user_id: userId,
           log_date: currentDate,
@@ -1058,7 +1067,7 @@ export default function App() {
             });
         }
     }, 800);
-    return () => clearTimeout(timer);
+    return () => { if(saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null; } };
   }, [score, prayers, prayerCount, exDone, mealsDone, exDoneCount, habitsDone, habitsDoneCount, caloriesHit, sleepLogged, sleepHrs, completedDays, dbLoaded, userId, wPlan, customExercises, currentDate, tahajjud, quranPages, foodEntries]);
 
   const SCORE_THRESHOLD = 60;
