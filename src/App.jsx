@@ -704,6 +704,13 @@ export default function App() {
   const [exDone, setExDone] = useState(()=>{
     try {
       const wk = getWeekKey();
+      const lastWk = localStorage.getItem('rebuild_ex_week');
+      if(lastWk !== wk) {
+        // New week — reset all exercise state
+        localStorage.setItem('rebuild_ex_week', wk);
+        localStorage.removeItem('rebuild_ex_done_' + lastWk);
+        return {};
+      }
       const saved = localStorage.getItem('rebuild_ex_done_' + wk);
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
@@ -773,12 +780,15 @@ export default function App() {
   const quote = useMemo(()=>QUOTES[Math.floor(Math.random()*QUOTES.length)],[]);
 
   const prayerCount = prayers.filter(Boolean).length;
-  const currentDay = HAJAZ_PLAN[selectedDayIdx];
-  const currentExercises = wPlan === "hajaz" ? currentDay.exercises : (customExercises[selectedDayIdx] || []);
-  const exDoneKeys = currentExercises.map((_,i)=>`${selectedDayIdx}-${wPlan}-${i}`);
-  // For run days: treat as 1/1 if runDone, else 0/1 so training score is properly earned
-  const exDoneCount = currentDay.run ? (runDone ? 1 : 0) : exDoneKeys.filter(k=>exDone[k]).length;
-  const exTotalForScore = currentDay.run ? 1 : currentExercises.length;
+  const currentDay = HAJAZ_PLAN[selectedDayIdx]; // for TRAIN tab display
+  const currentExercises = wPlan === "hajaz" ? (currentDay.exercises||[]) : (customExercises[selectedDayIdx] || []);
+  const isViewingToday = selectedDayIdx === dayIdx; // is TRAIN tab showing today?
+  // Score always uses TODAY's exercises, not whatever day is selected in TRAIN tab
+  const todayPlanDay = HAJAZ_PLAN[dayIdx];
+  const todayExercises = wPlan === "hajaz" ? (todayPlanDay.exercises||[]) : (customExercises[dayIdx] || []);
+  const todayExDoneKeys = todayExercises.map((_,i)=>`${dayIdx}-${wPlan}-${i}`);
+  const exDoneCount = todayPlanDay.run ? (runDone ? 1 : 0) : todayExDoneKeys.filter(k=>exDone[k]).length;
+  const exTotalForScore = todayPlanDay.run ? 1 : todayExercises.length;
   const habitsDoneCount = habitsDone.filter(Boolean).length;
 
   const allFoods = [...FOOD_DB, ...customFoods];
@@ -995,7 +1005,8 @@ export default function App() {
           setSleepLogged(false);
           setCaloriesHit(false);
           setHabitsDone(h => h.map(()=>false));
-          setExDone({});
+          // Don't reset exDone — exercises are week-scoped, not day-scoped.
+          // They reset Monday via the weekly key check in useState initializer.
           setMealsDone({});
           setFoodEntries([]);
         }
@@ -1348,7 +1359,7 @@ export default function App() {
                     <div className="stats-grid">
                       {[
                         {val:`${prayerCount}/5`,lbl:"PRAYERS",c:"#8a7a6a"},
-                        {val:currentDay.run?(runDone?"✓ RUN":"RUN 🏃"):currentDay.ayah?"REST 🌿":currentExercises.length===0?"—":`${exDoneCount}/${currentExercises.length}`,lbl:"EXERCISES",c:"#7a8a6a",sm:currentDay.run||currentDay.ayah},
+                        {val:todayPlanDay.run?(runDone?"✓ RUN":"RUN 🏃"):todayPlanDay.ayah?"REST 🌿":todayExercises.length===0?"—":`${exDoneCount}/${todayExercises.length}`,lbl:"EXERCISES",c:"#7a8a6a",sm:todayPlanDay.run||todayPlanDay.ayah},
                         {val:`${habitsDoneCount}/${habits.length}`,lbl:"HABITS",c:"#6a7a8a"},
                         {val:sleepLogged?`${sleepHrs}h`:"—",lbl:"SLEEP",c:"#7a6a8a"},
                       ].map((s,i)=>(
@@ -1664,13 +1675,19 @@ export default function App() {
                 </div>
               ):(
                 <div className="sec">
-                  <div className="t-label sec-gap">{currentDay.exercises.length} EXERCISES · ~60 MIN</div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                    <div className="t-label">{currentDay.exercises.length} EXERCISES · ~60 MIN</div>
+                    {!isViewingToday&&<div style={{fontFamily:G.mono,fontSize:9,color:G.gold,letterSpacing:"0.1em",padding:"3px 8px",border:`1px solid ${G.gold}44`,borderRadius:6}}>VIEW ONLY</div>}
+                  </div>
                   {currentDay.exercises.map((ex,i)=>{
                     const k=`${selectedDayIdx}-hajaz-${i}`;
                     const done=!!exDone[k];
                     return(
-                      <div key={i} className={`ex-card ${done?"done":""}`}>
-                        <div className={`ex-chk ${done?"on":""}`} onClick={()=>{haptic(10);toggleEx(i);}}>{done&&"✓"}</div>
+                      <div key={i} className={`ex-card ${done?"done":""}`} style={!isViewingToday?{opacity:0.7}:{}}>
+                        <div className={`ex-chk ${done?"on":""}`}
+                          onClick={()=>{ if(!isViewingToday) return; haptic(10); toggleEx(i); }}
+                          style={!isViewingToday?{cursor:"default",opacity:0.5}:{}}
+                        >{done&&"✓"}</div>
                         <div style={{flex:1}}>
                           <div className="ex-name" style={{textDecoration:done?"line-through":"none"}}>{ex.name}</div>
                           <div className="tags">
