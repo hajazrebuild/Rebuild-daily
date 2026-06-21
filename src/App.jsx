@@ -1594,17 +1594,19 @@ export default function App() {
                     <div style={{textAlign:"center",padding:"24px 0",color:G.muted,fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:"15px",fontStyle:"italic"}}>No exercises yet for this day.</div>
                   ):(
                     <div className="custom-ex-list">
-                      <div className="t-label sec-gap">{(customExercises[selectedDayIdx]||[]).length} EXERCISES</div>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                        <div className="t-label">{(customExercises[selectedDayIdx]||[]).length} EXERCISES</div>
+                        {!isViewingToday&&<div style={{fontFamily:G.mono,fontSize:9,color:G.gold,letterSpacing:"0.1em",padding:"3px 8px",border:`1px solid ${G.gold}44`,borderRadius:6}}>VIEW ONLY</div>}
+                      </div>
                       {(customExercises[selectedDayIdx]||[]).map((ex,i)=>{
                         const k=`${selectedDayIdx}-custom-${i}`;
                         const done=!!exDone[k];
                         return(
-                          <div key={i} className={`ex-card ${done?"done":""}`}>
-                            <div className={`ex-chk ${done?"on":""}`} onClick={()=>setExDone(p=>{
-                              const n={...p,[k]:!p[k]};
-                              try{localStorage.setItem('rebuild_ex_done_'+getWeekKey(),JSON.stringify(n))}catch{}
-                              return n;
-                            })}>
+                          <div key={i} className={`ex-card ${done?"done":""}`} style={!isViewingToday?{opacity:0.7}:{}}>
+                            <div className={`ex-chk ${done?"on":""}`}
+                              onClick={()=>{ if(!isViewingToday) return; setExDone(p=>{ const n={...p,[k]:!p[k]}; try{localStorage.setItem('rebuild_ex_done_'+getWeekKey(),JSON.stringify(n))}catch{}; return n; }); }}
+                              style={!isViewingToday?{cursor:"default",opacity:0.5}:{}}
+                            >
                               {done&&"✓"}
                             </div>
                             <div style={{flex:1}}>
