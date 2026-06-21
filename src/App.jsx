@@ -1635,6 +1635,9 @@ export default function App() {
                 <div className="sec">
                   <div style={{marginBottom:16}}>
                     <div style={{fontSize:40,marginBottom:10,textAlign:"center"}}>🏃</div>
+                    <button onClick={()=>{haptic(12);setRunDone(p=>!p);}} style={{width:"100%",padding:"14px 0",borderRadius:14,border:`1px solid ${runDone?G.lime:G.border}`,background:runDone?G.lime+"22":"transparent",color:runDone?G.lime:G.muted,fontFamily:G.mono,fontSize:11,fontWeight:700,letterSpacing:"0.1em",cursor:"pointer",transition:"all 0.2s",marginBottom:16}}>
+                      {runDone?"✓ RUN COMPLETE":"MARK RUN COMPLETE"}
+                    </button>
                     <div className="t-label sec-gap">RUN PROTOCOL</div>
                     {currentDay.runNotes.map((n,i)=>(
                       <div key={i} style={{padding:"11px 14px",marginBottom:8,background:G.surface,border:`1px solid ${G.border}`,borderRadius:12,fontSize:"13px",color:G.text,lineHeight:1.5}}>{n}</div>
@@ -1649,9 +1652,6 @@ export default function App() {
                   {currentDay.sauna&&(
                     <div style={{marginTop:8,padding:"12px 14px",background:"rgba(232,96,26,0.07)",border:`1px solid ${G.accent}44`,borderRadius:12,fontSize:"13px",color:G.accent}}>🧖 Sauna after run</div>
                   )}
-                  <button onClick={()=>{haptic(12);setRunDone(p=>!p);}} style={{marginTop:16,width:"100%",padding:"14px 0",borderRadius:14,border:`1px solid ${runDone?G.lime:G.border}`,background:runDone?G.lime+"22":"transparent",color:runDone?G.lime:G.muted,fontFamily:G.mono,fontSize:11,fontWeight:700,letterSpacing:"0.1em",cursor:"pointer",transition:"all 0.2s"}}>
-                    {runDone?"✓ RUN COMPLETE":"MARK RUN COMPLETE"}
-                  </button>
                 </div>
               ):currentDay.ayah?(
                 <div className="sec">
