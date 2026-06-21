@@ -615,6 +615,8 @@ export default function App() {
   const [screen, setScreen] = useState("onboard");
   const [authReady, setAuthReady] = useState(false);
   const [userId, setUserId] = React.useState(null);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [wtStep, setWtStep] = useState(0);
   const [modal, setModal] = useState(null); // "share"|"addEx"|"addHabit"|"customChallenge"|"addFood"|"setupMacros"|"profile"|"dayDetail"
   const [viewedDay, setViewedDay] = useState(null); // the logHistory row tapped on the home calendar strip
   const [pastDay, setPastDay] = useState(null); // null = live today, or {date, data, loading} for past day view
@@ -1122,6 +1124,21 @@ export default function App() {
     {id:"community",ic:Ic.community,lbl:"CLUB"},
   ];
 
+  const WT_STEPS = [
+    { screen:"home",     icon:"🏠", title:"Home",        body:"Your daily discipline score lives here — 0 to 100. It updates in real time as you log the day. Tap any date on the calendar strip to review a past day." },
+    { screen:"workout",  icon:"🏋️", title:"Train",       body:"Your weekly workout plan. Check off each exercise as you complete it. On run days, tap 'Mark Run Complete'. Exercises reset every Monday." },
+    { screen:"prayer",   icon:"🕌", title:"Faith",       body:"Log your 5 daily prayers, Quran pages, and Tahajjud here. Faith makes up 30 points of your score — the biggest category." },
+    { screen:"nutrition",icon:"🥗", title:"Fuel",        body:"Track your meals. You earn 12 points when you hit 90% of your calorie target. Use Hajaz's plan or set your own macro targets." },
+    { screen:"habits",   icon:"✅", title:"Habits",      body:"Your daily habits checklist. Each habit you complete adds to your score. You can add, edit, or remove habits in settings." },
+    { screen:"community",icon:"🤝", title:"Club",        body:"See where you rank against other members. The leaderboard updates daily based on everyone's score." },
+  ];
+
+  function finishWalkthrough() {
+    try { localStorage.setItem('rebuild_walkthrough_done','1'); } catch {}
+    setShowWalkthrough(false);
+    setScreen("home");
+  }
+
   return(
     <>
       <style>{CSS}</style>
@@ -1134,7 +1151,7 @@ export default function App() {
             </div>
           )}
           {screen==="onboard"&&authReady&&(
-            <OnboardFlow onComplete={(name)=>{ try { localStorage.setItem("rebuild_username", name); } catch {} setUserName(name);setScreen("home");}} logo={LOGO_SRC} />
+            <OnboardFlow onComplete={(name)=>{ try { localStorage.setItem("rebuild_username", name); } catch {} setUserName(name);setScreen("home"); try{ if(!localStorage.getItem('rebuild_walkthrough_done')){ setWtStep(0); setShowWalkthrough(true); } }catch{} }} logo={LOGO_SRC} />
           )}
 
           {/* HOME */}
@@ -2123,6 +2140,46 @@ export default function App() {
               ))}
             </div>
           )}
+
+          {/* ── WALKTHROUGH ── */}
+          {showWalkthrough&&(()=>{
+            const step = WT_STEPS[wtStep];
+            const isLast = wtStep === WT_STEPS.length - 1;
+            // Navigate the background screen to match the step
+            if(screen !== step.screen) setScreen(step.screen);
+            return (
+              <div style={{position:"absolute",inset:0,zIndex:300,display:"flex",flexDirection:"column",justifyContent:"flex-end",background:"rgba(0,0,0,0.55)",backdropFilter:"blur(2px)"}}>
+                <div style={{margin:"0 16px 100px",background:G.card,border:`1px solid ${G.border}`,borderRadius:24,padding:"28px 24px 24px",boxShadow:"0 8px 40px rgba(0,0,0,0.6)"}}>
+                  {/* Progress dots */}
+                  <div style={{display:"flex",gap:5,justifyContent:"center",marginBottom:20}}>
+                    {WT_STEPS.map((_,i)=>(
+                      <div key={i} style={{width: i===wtStep?20:6,height:6,borderRadius:3,background:i===wtStep?G.accent:G.border,transition:"all 0.3s"}}/>
+                    ))}
+                  </div>
+                  {/* Icon + title */}
+                  <div style={{textAlign:"center",marginBottom:14}}>
+                    <div style={{fontSize:36,marginBottom:8}}>{step.icon}</div>
+                    <div style={{fontFamily:G.mono,fontSize:11,letterSpacing:"0.12em",color:G.accent,marginBottom:4}}>{step.title.toUpperCase()}</div>
+                  </div>
+                  {/* Body */}
+                  <div style={{fontFamily:G.sans,fontSize:14,color:G.muted,lineHeight:1.6,textAlign:"center",marginBottom:24}}>{step.body}</div>
+                  {/* Buttons */}
+                  <div style={{display:"flex",gap:10}}>
+                    {wtStep > 0 && (
+                      <button onClick={()=>setWtStep(s=>s-1)} style={{flex:1,padding:"12px 0",borderRadius:12,border:`1px solid ${G.border}`,background:"transparent",color:G.muted,fontFamily:G.mono,fontSize:11,fontWeight:700,letterSpacing:"0.1em",cursor:"pointer"}}>BACK</button>
+                    )}
+                    <button onClick={()=>{ haptic(10); isLast ? finishWalkthrough() : setWtStep(s=>s+1); }} style={{flex:2,padding:"12px 0",borderRadius:12,border:"none",background:G.accent,color:"#fff",fontFamily:G.mono,fontSize:11,fontWeight:700,letterSpacing:"0.1em",cursor:"pointer"}}>
+                      {isLast ? "GET STARTED" : "NEXT"}
+                    </button>
+                  </div>
+                  {/* Skip */}
+                  {!isLast && (
+                    <button onClick={finishWalkthrough} style={{display:"block",margin:"14px auto 0",background:"none",border:"none",color:G.muted,fontFamily:G.mono,fontSize:9,letterSpacing:"0.1em",cursor:"pointer",opacity:0.6}}>SKIP TOUR</button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── MODALS ── */}
 
