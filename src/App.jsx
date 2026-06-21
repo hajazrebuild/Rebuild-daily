@@ -678,7 +678,10 @@ export default function App() {
   const localDateStr = (d=new Date())=>{ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; };
   const [currentDate, setCurrentDate] = useState(()=> localDateStr());
 
-  // Auto-update day when app comes back into focus (e.g. next day)
+  // Refresh key: increment to force a re-fetch from Supabase (cross-device sync)
+  const [logRefreshKey, setLogRefreshKey] = React.useState(0);
+
+  // Auto-update day when app comes back into focus (e.g. next day or cross-device sync)
   useEffect(()=>{
     const handleVisibility = ()=>{
       if(document.visibilityState === 'visible'){
@@ -690,6 +693,9 @@ export default function App() {
         // If the calendar date has actually rolled over since last check,
         // flip currentDate so the daily_logs reload effect re-fetches fresh state.
         setCurrentDate(prev => prev === todayStr ? prev : todayStr);
+        // Always re-fetch from Supabase on focus to sync cross-device changes
+        lastLoadedDateRef.current = null;
+        setLogRefreshKey(k => k+1);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -888,7 +894,7 @@ export default function App() {
 
   const [lbData, setLbData] = React.useState([]);
   useEffect(()=>{
-    if(screen !== "community") return;
+    if(screen !== "community" && screen !== "home") return;
     supabase.from("leaderboard").select("*").limit(10)
       .then(({ data })=>{ if(data && data.length > 0) setLbData(data); });
   }, [screen]);
@@ -989,7 +995,7 @@ export default function App() {
       setDbLoaded(true);
     }
     loadDailyLog();
-  }, [screen, userId, currentDate]);
+  }, [screen, userId, currentDate, logRefreshKey]);
 
   // ── Supabase: save daily log (debounced 800ms, only after initial load) ──
   useEffect(()=>{
