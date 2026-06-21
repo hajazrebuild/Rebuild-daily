@@ -704,6 +704,7 @@ export default function App() {
   });
   const [customExercises, setCustomExercises] = useState(()=>{ try { const s=localStorage.getItem('rebuild_custom_ex'); return s?JSON.parse(s):{} } catch{return {}} });
   const [exForm, setExForm] = useState({name:"",sets:"3",reps:"10-12",rest:"60s",note:""});
+  const [runDone, setRunDone] = useState(false);
 
   // Nutrition
   const [nPlan, setNPlan] = useState("hajaz");
@@ -749,7 +750,7 @@ export default function App() {
   const [habitForm, setHabitForm] = useState({name:"",icon:"⭐",pts:"10"});
 
   // Sleep
-  const [sleepHrs, setSleepHrs] = useState(()=>{ try { const s=localStorage.getItem("rebuild_settings"); return s?JSON.parse(s).sleepTarget||7:7; } catch { return 7; } });
+  const [sleepHrs, setSleepHrs] = useState(0);
   const [sleepLogged, setSleepLogged] = useState(false);
 
   // Misc
@@ -769,7 +770,9 @@ export default function App() {
   const currentDay = HAJAZ_PLAN[selectedDayIdx];
   const currentExercises = wPlan === "hajaz" ? currentDay.exercises : (customExercises[selectedDayIdx] || []);
   const exDoneKeys = currentExercises.map((_,i)=>`${selectedDayIdx}-${wPlan}-${i}`);
-  const exDoneCount = exDoneKeys.filter(k=>exDone[k]).length;
+  // For run days: treat as 1/1 if runDone, else 0/1 so training score is properly earned
+  const exDoneCount = currentDay.run ? (runDone ? 1 : 0) : exDoneKeys.filter(k=>exDone[k]).length;
+  const exTotalForScore = currentDay.run ? 1 : currentExercises.length;
   const habitsDoneCount = habitsDone.filter(Boolean).length;
 
   const allFoods = [...FOOD_DB, ...customFoods];
@@ -838,7 +841,7 @@ export default function App() {
     }, { onConflict: "id" });
   }, [habits, activeChallenge, completedDays, khatamPage, customMacros, customFoods, userId]);
 
-  const score = useMemo(()=>calcScore(prayerCount, exDoneCount, currentExercises.length, habitsDoneCount, habits.length, caloriesHit, sleepLogged ? sleepHrs : 0),[prayerCount,exDoneCount,currentExercises.length,habitsDoneCount,habits.length,caloriesHit,sleepLogged,sleepHrs]);
+  const score = useMemo(()=>calcScore(prayerCount, exDoneCount, exTotalForScore, habitsDoneCount, habits.length, caloriesHit, sleepLogged ? sleepHrs : 0),[prayerCount,exDoneCount,exTotalForScore,habitsDoneCount,habits.length,caloriesHit,sleepLogged,sleepHrs]);
 
   // ── Supabase: load today's log ONCE when user first reaches home ──
   const [dbLoaded, setDbLoaded] = React.useState(false);
@@ -965,12 +968,15 @@ export default function App() {
           if(data.tahajjud != null) setTahajjud(!!data.tahajjud);
           if(data.quran_pages != null) setQuranPages(data.quran_pages);
           if(data.food_entries) { try{ setFoodEntries(JSON.parse(data.food_entries)); }catch{} }
+          // run done: exercises_done=1, exercises_total=1 on a run day means run was completed
+          setRunDone(!!data.exercises_done && data.exercises_total===1 && HAJAZ_PLAN[new Date(data.log_date+"T00:00:00").getDay()===0?6:new Date(data.log_date+"T00:00:00").getDay()-1]?.run);
         } else {
           // No log exists yet for this date — reset to a clean slate rather than
           // leaving whatever the previous day's state happened to be in memory.
           setPrayers([false,false,false,false,false]);
           setTahajjud(false);
           setQuranPages(0);
+          setRunDone(false);
           setSleepHrs(0);
           setSleepLogged(false);
           setCaloriesHit(false);
@@ -998,7 +1004,7 @@ export default function App() {
           quran_pages: quranPages,
           sleep_hrs: sleepLogged ? sleepHrs : 0,
           exercises_done: exDoneCount,
-          exercises_total: currentExercises.length,
+          exercises_total: exTotalForScore,
           habits_done: habitsDoneCount,
           habits_total: habits.length,
           calories_hit: caloriesHit,
@@ -1310,7 +1316,7 @@ export default function App() {
                       </div>
                       <div className="score-bar"><div className="score-fill" style={{width:`${score}%`}}/></div>
                       <div className="score-breakdown">
-                        {[["Faith",G.accent,30],["Training",G.gold,30],["Habits",G.lime,25],["Nutrition",G.blue,12],["Sleep",G.purple,8]].map(([l,c,p])=>(
+                        {[["Faith",G.accent,30],["Training",G.gold,25],["Habits",G.lime,25],["Nutrition",G.blue,12],["Sleep",G.purple,8]].map(([l,c,p])=>(
                           <div key={l} className="score-part"><div className="score-dot" style={{background:c}}/>{l} {p}%</div>
                         ))}
                       </div>
@@ -1322,7 +1328,7 @@ export default function App() {
                     <div className="stats-grid">
                       {[
                         {val:`${prayerCount}/5`,lbl:"PRAYERS",c:"#8a7a6a"},
-                        {val:currentDay.run?"RUN 🏃":currentDay.ayah?"REST 🌿":currentExercises.length===0?"—":`${exDoneCount}/${currentExercises.length}`,lbl:"EXERCISES",c:"#7a8a6a",sm:currentDay.run||currentDay.ayah},
+                        {val:currentDay.run?(runDone?"✓ RUN":"RUN 🏃"):currentDay.ayah?"REST 🌿":currentExercises.length===0?"—":`${exDoneCount}/${currentExercises.length}`,lbl:"EXERCISES",c:"#7a8a6a",sm:currentDay.run||currentDay.ayah},
                         {val:`${habitsDoneCount}/${habits.length}`,lbl:"HABITS",c:"#6a7a8a"},
                         {val:sleepLogged?`${sleepHrs}h`:"—",lbl:"SLEEP",c:"#7a6a8a"},
                       ].map((s,i)=>(
@@ -1596,6 +1602,9 @@ export default function App() {
                   {currentDay.sauna&&(
                     <div style={{marginTop:8,padding:"12px 14px",background:"rgba(232,96,26,0.07)",border:`1px solid ${G.accent}44`,borderRadius:12,fontSize:"13px",color:G.accent}}>🧖 Sauna after run</div>
                   )}
+                  <button onClick={()=>{haptic(12);setRunDone(p=>!p);}} style={{marginTop:16,width:"100%",padding:"14px 0",borderRadius:14,border:`1px solid ${runDone?G.lime:G.border}`,background:runDone?G.lime+"22":"transparent",color:runDone?G.lime:G.muted,fontFamily:G.mono,fontSize:11,fontWeight:700,letterSpacing:"0.1em",cursor:"pointer",transition:"all 0.2s"}}>
+                    {runDone?"✓ RUN COMPLETE":"MARK RUN COMPLETE"}
+                  </button>
                 </div>
               ):currentDay.ayah?(
                 <div className="sec">
