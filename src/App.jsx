@@ -668,7 +668,7 @@ export default function App() {
   // Prayer
   const [prayers, setPrayers] = useState([false,false,false,false,false]);
   const [tahajjud, setTahajjud] = useState(false);
-  const [quranPages, setQuranPages] = useState(()=>{ try{return parseInt(localStorage.getItem('rebuild_quran_pages'))||0}catch{return 0} });
+  const [quranPages, setQuranPages] = useState(()=>{ try{ const p=n=>String(n).padStart(2,'0'); const d=new Date(); const today=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; return parseInt(localStorage.getItem('rebuild_quranPages_'+today))||0}catch{return 0} });
   const [khatamPage, setKhatamPage] = useState(()=>{ try{return parseInt(localStorage.getItem('rebuild_khatam_page'))||1}catch{return 1} });
 
   // Workout
@@ -1734,7 +1734,7 @@ export default function App() {
                     <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:"15px",fontWeight:700}}>Pages read today</div>
                     <div style={{fontSize:"11px",color:G.muted}}>Track your daily reading</div>
                   </div>
-                  <input className="quran-input" type="number" min="0" value={quranPages} onChange={e=>{ const v=parseInt(e.target.value)||0; setQuranPages(v); try{localStorage.setItem('rebuild_quran_pages',v)}catch{} }}/>
+                  <input className="quran-input" type="number" min="0" value={quranPages} onChange={e=>{ const v=parseInt(e.target.value)||0; setQuranPages(v); try{localStorage.setItem('rebuild_quranPages_'+localDateStr(),v)}catch{} }}/>
                   <div style={{fontFamily:G.mono,fontSize:"10px",color:G.muted}}>pages</div>
                 </div>
 
