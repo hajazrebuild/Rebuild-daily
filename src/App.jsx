@@ -1666,7 +1666,7 @@ export default function App() {
                 <div className="sec">
                   <div className="t-label sec-gap">{currentDay.exercises.length} EXERCISES · ~60 MIN</div>
                   {currentDay.exercises.map((ex,i)=>{
-                    const k=`${dayIdx}-hajaz-${i}`;
+                    const k=`${selectedDayIdx}-hajaz-${i}`;
                     const done=!!exDone[k];
                     return(
                       <div key={i} className={`ex-card ${done?"done":""}`}>
