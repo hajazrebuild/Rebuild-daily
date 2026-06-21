@@ -876,7 +876,7 @@ export default function App() {
         }
         setStreak(count);
       });
-  }, [userId, score]);
+  }, [userId, currentDate]);
 
   const todayPillRef = React.useRef(null);
   // Scroll today pill to left edge of calendar on mount
