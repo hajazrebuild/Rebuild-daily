@@ -1322,12 +1322,12 @@ export default function App() {
                     <div className="stats-grid">
                       {[
                         {val:`${prayerCount}/5`,lbl:"PRAYERS",c:"#8a7a6a"},
-                        {val:currentDay.run?"RUN 🏃":currentDay.ayah?"REST 🌿":currentExercises.length===0?"—":`${exDoneCount}/${currentExercises.length}`,lbl:"EXERCISES",c:"#7a8a6a"},
+                        {val:currentDay.run?"RUN 🏃":currentDay.ayah?"REST 🌿":currentExercises.length===0?"—":`${exDoneCount}/${currentExercises.length}`,lbl:"EXERCISES",c:"#7a8a6a",sm:currentDay.run||currentDay.ayah},
                         {val:`${habitsDoneCount}/${habits.length}`,lbl:"HABITS",c:"#6a7a8a"},
                         {val:sleepLogged?`${sleepHrs}h`:"—",lbl:"SLEEP",c:"#7a6a8a"},
                       ].map((s,i)=>(
                         <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:16,padding:"16px 15px",borderTop:`1px solid ${s.c}55`}}>
-                          <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:20,fontWeight:600,letterSpacing:"-0.02em",color:G.text,lineHeight:1,marginBottom:6}}>{s.val}</div>
+                          <div style={{fontFamily:"-apple-system,'SF Pro Display','Helvetica Neue',sans-serif",fontSize:s.sm?13:20,fontWeight:600,letterSpacing:"-0.02em",color:G.text,lineHeight:1,marginBottom:6}}>{s.val}</div>
                           <div style={{fontFamily:G.mono,fontSize:9,color:G.muted,letterSpacing:"0.1em"}}>{s.lbl}</div>
                         </div>
                       ))}
