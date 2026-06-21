@@ -917,7 +917,10 @@ export default function App() {
         }
         if(profileData.habits && profileData.habits.length > 0) {
           setHabits(profileData.habits);
-          setHabitsDone(Array(profileData.habits.length).fill(false));
+          // Only reset habitsDone if localStorage doesn't have today's data
+          const todayStr = localDateStr();
+          const saved = (() => { try { const s=localStorage.getItem('rebuild_habitsDone_'+todayStr); return s?JSON.parse(s):null; } catch{return null;} })();
+          if(!saved) setHabitsDone(Array(profileData.habits.length).fill(false));
         }
         if(profileData.active_challenge) {
           setActiveChallenge(profileData.active_challenge);
@@ -1186,7 +1189,7 @@ export default function App() {
 
                   {pastDay.loading ? (
                     <div style={{textAlign:"center",padding:"48px 0",color:G.muted,fontFamily:G.sans,fontSize:13}}>Loading...</div>
-                  ) : !pastDay.data?.score ? (
+                  ) : pastDay.data?._noData ? (
                     <div style={{textAlign:"center",padding:"48px 24px"}}>
                       <div style={{fontSize:36,marginBottom:12}}>📭</div>
                       <div style={{fontFamily:G.sans,fontSize:15,color:G.muted}}>Nothing logged on this day.</div>
